@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-import os
 import json
+from text_processing import create_sparse_vectors
 
 
 def load_data(file_path):
@@ -16,3 +16,7 @@ def load_data(file_path):
 
 path = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
 news_data = load_data(file_path=path)
+
+X_sparse = create_sparse_vectors(news_data)
+print(X_sparse)
+
