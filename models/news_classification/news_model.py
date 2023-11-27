@@ -20,3 +20,5 @@ news_data = load_data(file_path=path)
 X_sparse = create_sparse_vectors(news_data)
 print(X_sparse)
 
+#labels = [entry['category'] for entry in news_data]
+
