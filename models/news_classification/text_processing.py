@@ -1,7 +1,7 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-def create_sparse_vectors(data, text_column='headline', max_features=5000):
+def create_sparse_vectors(data, text_column='headline'):
     """
     Create sparse TF-IDF vectors for the text data.
 
@@ -15,7 +15,7 @@ def create_sparse_vectors(data, text_column='headline', max_features=5000):
     """
 
     texts = [entry[text_column] for entry in data]
-    vectorizer = TfidfVectorizer(max_features=max_features)
+    vectorizer = TfidfVectorizer()
 
     X_sparse = vectorizer.fit_transform(texts)
 
