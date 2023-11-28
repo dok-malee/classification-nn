@@ -90,7 +90,7 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-    print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}')
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}')
 
 # Save the trained model
 torch.save(model.state_dict(), 'genre_classification_model.pth')
