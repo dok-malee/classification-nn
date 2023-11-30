@@ -1,6 +1,7 @@
 from sklearn.preprocessing import LabelEncoder
 
 from text_processing import load_dataset
+from sklearn.metrics import confusion_matrix as sk_confusion_matrix
 import numpy as np
 import torch
 import torch.nn as nn
@@ -132,15 +133,12 @@ for epoch in range(epochs):
 # Evaluate the model on the test set
 all_preds, all_labels = evaluate_model(model, test_loader, criterion, device)
 
-# Confusion matrix
-confusion_matrix = torch.zeros(output_size, output_size)
 
-# Populate the confusion matrix
-confusion_matrix += torch.nn.functional.one_hot(torch.tensor(all_labels), num_classes=output_size).T @ torch.nn.functional.one_hot(torch.tensor(all_preds), num_classes=output_size)
+# Compute the confusion matrix using sklearn
+conf_matrix = sk_confusion_matrix(all_labels, all_preds, labels=range(output_size))
 
 # Normalize the confusion matrix to get percentages
-conf_matrix_np = confusion_matrix.detach().cpu().numpy()
-conf_matrix_percentage = conf_matrix_np / (conf_matrix_np.sum(axis=1, keepdims=True) + 1e-10)
+conf_matrix_percentage = conf_matrix / (conf_matrix.sum(axis=1, keepdims=True) + 1e-10)
 
 # Plot the confusion matrix
 plt.figure(figsize=(21, 18))
