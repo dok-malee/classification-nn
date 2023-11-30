@@ -1,10 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.metrics import classification_report
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import LabelEncoder
 import json
 from text_processing import create_sparse_vectors
+
+path = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
+path_testset = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
 
 
 def load_data(file_path):
@@ -15,19 +19,21 @@ def load_data(file_path):
     return data
 
 
-def create_labels(loaded_data):
+def create_labels(loaded_data, label_encoder=None):
     labels = [entry['category'] for entry in loaded_data]
-    label_encoder = LabelEncoder()
-
-    # fits the encoder to the unique labels in your data and transforms the labels into numerical values
-    # each color is assigned an integer
-    y = label_encoder.fit_transform(labels)
+    if label_encoder is None:
+        label_encoder = LabelEncoder()
+        # fits the encoder to the unique labels in your data and transforms the labels into numerical values
+        # each color is assigned an integer
+        y = label_encoder.fit_transform(labels)
+    else:
+        # Use the existing label encoder for the test data
+        y = label_encoder.transform(labels)
 
     # one hot encoding for nominal data
-    y_onehot = torch.nn.functional.one_hot(torch.tensor(y))
 
-    label_mapping = dict(zip(label_encoder.classes_, y_onehot.numpy()))
-    return y_onehot, label_mapping, len(label_encoder.classes_)
+    label_mapping = dict(zip(label_encoder.classes_, y.numpy()))
+    return y, label_mapping, len(label_encoder.classes_), label_encoder
 
 
 class FeedforwardNN(nn.Module):
@@ -45,17 +51,13 @@ class FeedforwardNN(nn.Module):
 
 
 if __name__ == "__main__":
-    path = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
-    path_testset = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
-
     news_data = load_data(file_path=path)
-    #news_data_test = load_data(file_path=path_testset)
 
-    X_sparse_train = create_sparse_vectors(news_data)
-    print(X_sparse_train)
+    X_sparse_train, vectorizer = create_sparse_vectors(news_data)
+    #print(X_sparse_train)
 
-    labels_onehot, labels_mapping, count_labels = create_labels(news_data)
-    print(labels_mapping)
+    y, labels_mapping, count_labels, label_encoder = create_labels(news_data)
+    #print(labels_mapping)
 
     input_size = X_sparse_train.shape[1]
     hidden_size = 64
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     # Convert sparse matrix to PyTorch tensor
     X_train_tensor = torch.tensor(X_sparse_train.toarray(), dtype=torch.float32)
     # Create a DataLoader for training
-    train_dataset = TensorDataset(X_train_tensor, labels_onehot)
+    train_dataset = TensorDataset(X_train_tensor, y)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     # Training
@@ -92,5 +94,32 @@ if __name__ == "__main__":
 
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}')
 
-# Save the trained model
-torch.save(model.state_dict(), 'genre_classification_model.pth')
+    # Save the trained model
+    torch.save(model.state_dict(), 'genre_classification_model.pth')
+
+    news_data_test = load_data(file_path=path_testset)
+
+    X_sparse_test, _ = create_sparse_vectors(news_data_test, text_column='headline', vectorizer=vectorizer)
+    X_test_tensor = torch.tensor(X_sparse_test.toarray(), dtype=torch.float32)
+
+    y, labels_mapping, count_labels, _ = create_labels(news_data_test, label_encoder=label_encoder)
+    # print(labels_mapping)
+
+    # Load the trained model
+    model = FeedforwardNN(input_size, hidden_size, output_size)
+    model.load_state_dict(torch.load('genre_classification_model.pth'))
+    model.eval()
+
+    # Perform forward pass on the test set
+    with torch.no_grad():
+        outputs_test = model(X_test_tensor)
+
+    # Convert outputs to class predictions
+    predictions = torch.argmax(outputs_test, dim=1).numpy()
+
+    # Convert one-hot encoded labels to class indices
+    true_labels = torch.argmax(y, dim=1).numpy()
+
+    # Print classification report
+    report = classification_report(true_labels, predictions)
+    print("Classification Report:\n", report)
