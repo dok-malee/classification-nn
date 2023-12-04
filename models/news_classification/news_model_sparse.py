@@ -12,7 +12,7 @@ import seaborn as sns
 
 train_file = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
 test_file = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
-print(torch.cuda.is_available())
+#print(torch.cuda.is_available())
 
 
 # Custom dataset class
