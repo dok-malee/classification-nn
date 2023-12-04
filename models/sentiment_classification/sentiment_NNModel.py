@@ -62,15 +62,17 @@ class FFNN(nn.Module):
         return Y_pred
 
 
-def train_model(x, y, model, opt, loss_fn, batch_size=32, num_epochs=1000):
+def train_model(x, y, model, opt, loss_fn, batch_size=32, num_epochs=10):
     """train model with batch, but I think there are some bugs with the loss function part."""
     dataset = torch.utils.data.TensorDataset(x, y)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     total_step = len(dataloader)
-    for epoch in range(epochs):
+    for epoch in range(num_epochs):
+        model.train()
         total_loss = 0.0
 
         for batch_x, batch_y in dataloader:
+            opt.zero_grad()
             # Forward pass
             logits = model(batch_x)
 
@@ -80,16 +82,16 @@ def train_model(x, y, model, opt, loss_fn, batch_size=32, num_epochs=1000):
             # Backward pass and optimization
             loss.backward()
             opt.step()
-            opt.zero_grad()
             # print('optimized')
 
             total_loss += loss.item()
 
         # Average loss for the epoch
         average_loss = total_loss / len(dataloader)
-        if (epoch + 1) % 100 == 0:
-            print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
-                  .format(epoch + 1, num_epochs, epoch + 1, total_step, average_loss))
+        print(f'Epoch {epoch + 1}/{num_epochs}, Training Loss: {average_loss:.4f}')
+        #if (epoch + 1) % 100 == 0:
+        #   print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
+        #          .format(epoch + 1, num_epochs, epoch + 1, total_step, average_loss))
 
     return average_loss
 

@@ -50,12 +50,14 @@ Y_test = torch.tensor(test_encoded).to(device)
 hidden_sizes = [128, 64, 32]
 batch_size = 32
 learning_rate = 0.001
-num_epochs = 1000
+num_epochs = 10
 # parameters
 input_size = X_train.shape[1]
 output_size = 2
 
 fn = FFNN(input_size, hidden_sizes, output_size)
+
+fn.to('cuda')
 loss_fn = nn.CrossEntropyLoss()
 opt = optim.SGD(fn.parameters(), lr=learning_rate)
 
