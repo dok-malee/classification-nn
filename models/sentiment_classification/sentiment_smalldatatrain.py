@@ -14,11 +14,11 @@ from torch import optim
 train_path = '../../data/classification_data/data/sentiment/classification/classification_sentiment_train.jsonl'
 test_path = '../../data/classification_data/data/sentiment/classification/classification_sentiment_eval.jsonl'
 
-train_data = load_dataset(train_path)
-test_data = load_dataset(test_path)
-# hyper_param = {'max_df': 0.6, 'min_df': 0.005}
-# convert the dataset to tensor, and split the training data into train and validation set
-x_train, y_train, x_test, y_test = get_matrix_for_models(train_data, test_data)
+train_data1= load_dataset(train_path)[0][:1000], load_dataset(train_path)[1][:1000]
+# take first 100 pieces of training data to train the model
+test_data1 = load_dataset(test_path)
+x_train, y_train, x_test, y_test = get_matrix_for_models(train_data1, test_data1)
+# X_train, X_val, y_train, y_val = train_test_split(X_training, y_training, test_size=0.2)
 
 device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
 
@@ -59,5 +59,5 @@ Y_pred_test = model.predict(X_test)
 accuracy_train = accuracy(Y_pred_train, Y_train)
 accuracy_val = accuracy(Y_pred_test, Y_test)
 
-print("Training accuracy", (accuracy_train))
-print("Validation accuracy",(accuracy_val))
+print("Training accuracy", (accuracy_train)) #0.9810
+print("Validation accuracy",(accuracy_val)) #0.5789

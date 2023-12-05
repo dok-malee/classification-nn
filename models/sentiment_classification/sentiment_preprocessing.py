@@ -1,6 +1,8 @@
 import collections
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
+import torch
+import numpy as np
 
 
 
@@ -13,6 +15,8 @@ def load_dataset(path):
             insts.append(json.loads(line)['text'])
             labels.append(json.loads(line)['sentiment'])
         return insts, labels
+
+
 
 def get_matrix_for_models(train_data, test_data, hyper_param={'max_features': None, 'max_df': 1, 'min_df': 1}):
     """
@@ -35,7 +39,6 @@ def get_matrix_for_models(train_data, test_data, hyper_param={'max_features': No
 
     x_test = test_sparse_matrix
     y_test = test_data[1]
-
     return x_train, y_train, x_test, y_test
 
 
@@ -43,8 +46,8 @@ if __name__ == '__main__':
     train_path = '../../data/classification_data/data/sentiment/classification/classification_sentiment_train.jsonl'
     test_path = '../../data/classification_data/data/sentiment/classification/classification_sentiment_eval.jsonl'
 
-    hyper_param = {'max_features': 10000, 'max_df': 0.9}
-    print(get_matrix_for_models(train_path, test_path, hyper_param)[0])
+    hyper_param = {'max_features': 100, 'max_df': 0.9}
+    print(get_matrix_for_models(load_dataset(train_path), load_dataset(test_path), hyper_param)[0])
 
 
 
