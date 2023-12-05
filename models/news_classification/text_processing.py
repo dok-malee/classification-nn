@@ -1,38 +1,17 @@
 import json
 import pandas as pd
+import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from time import time
-
-
-def create_sparse_vectors(data, text_column='headline', vectorizer=None):
-    """
-    Create sparse TF-IDF vectors for the text data.
-
-    Parameters:
-    - data: List of dictionaries where each dictionary represents a data point.
-    - text_column: The name of the column containing the text data.
-    - max_features: The maximum number of features (unique words) to consider in the TF-IDF vectorization.
-
-    Returns:
-    - X_sparse: Sparse TF-IDF matrix.
-    """
-
-    texts = [entry[text_column] for entry in data]
-
-    if vectorizer is None:
-        vectorizer = TfidfVectorizer()
-
-    X_sparse = vectorizer.fit_transform(texts)
-
-    return X_sparse, vectorizer
+from transformers import BertTokenizer, BertModel
 
 
 def size_mb(docs):
     return sum(len(s.encode("utf-8")) for s in docs) / 1e6
 
 
-def load_dataset(train_file, test_file, verbose=False):
-    """Load and vectorize the news articles dataset."""
+def load_datasets(train_file, test_file):
+    """Load the news articles dataset."""
 
     # Load training data
     with open(train_file, 'r', encoding='utf-8') as file:
@@ -41,6 +20,12 @@ def load_dataset(train_file, test_file, verbose=False):
     # Load test data
     with open(test_file, 'r', encoding='utf-8') as file:
         test_data = [json.loads(line) for line in file]
+
+    return train_data, test_data
+
+
+def create_sparse_matrices(train_data, test_data, verbose=False):
+    """Vectorize the news articles dataset."""
 
     # Create DataFrames for easier handling
     train_df = pd.DataFrame(train_data)
@@ -81,3 +66,46 @@ def load_dataset(train_file, test_file, verbose=False):
         print(f"n_samples: {X_test.shape[0]}, n_features: {X_test.shape[1]}")
 
     return X_train, X_test, y_train, y_test, feature_names, y_train.unique()
+
+
+def create_dense_embeddings(train_data,test_data, text_column='headline', model_name='bert-base-uncased'):
+    """
+    Create dense embeddings using a pre-trained transformer model (e.g., BERT).
+
+    Parameters:
+    - data: List of dictionaries where each dictionary represents a data point.
+    - text_column: The name of the column containing the text data.
+    - model_name: The name of the pre-trained transformer model.
+
+    Returns:
+    - embeddings: Dense embeddings matrix.
+    """
+    # Create DataFrames for easier handling
+    train_df = pd.DataFrame(train_data)
+    test_df = pd.DataFrame(test_data)
+
+    # Extract labels
+    y_train = train_df['category']
+    y_test = test_df['category']
+
+    # Extract text
+    train_texts = train_df[text_column]
+    test_texts = test_df[text_column]
+
+    # Load pre-trained tokenizer and model
+    tokenizer = BertTokenizer.from_pretrained(model_name)
+    model = BertModel.from_pretrained(model_name)
+
+    # Tokenize and obtain dense embeddings for training data
+    tokenized_train_texts = tokenizer(train_texts.tolist(), padding=True, truncation=True, return_tensors="pt")
+    with torch.no_grad():
+        outputs_train = model(**tokenized_train_texts)
+    dense_embeddings_train = outputs_train.last_hidden_state
+
+    # Tokenize and obtain dense embeddings for test data
+    tokenized_test_texts = tokenizer(test_texts.tolist(), padding=True, truncation=True, return_tensors="pt")
+    with torch.no_grad():
+        outputs_test = model(**tokenized_test_texts)
+    dense_embeddings_test = outputs_test.last_hidden_state
+
+    return dense_embeddings_train, dense_embeddings_test, y_train, y_test

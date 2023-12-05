@@ -1,6 +1,6 @@
 from sklearn.preprocessing import LabelEncoder
 
-from text_processing import load_dataset
+from text_processing import create_sparse_matrices, load_datasets
 from sklearn.metrics import confusion_matrix as sk_confusion_matrix
 import numpy as np
 import torch
@@ -84,8 +84,8 @@ def evaluate_model(model, test_loader, criterion, device):
 
     return all_preds, all_labels
 
-
-X_train, X_test, y_train, y_test, feature_names, target_names = load_dataset(train_file, test_file, verbose=True)
+train_data, test_data = load_datasets(train_file, test_file)
+X_train, X_test, y_train, y_test, feature_names, target_names = create_sparse_matrices(train_data=train_data, test_data=test_data, verbose=True)
 
 # Convert sparse matrices to PyTorch sparse tensors
 X_train_sparse = torch.sparse_coo_tensor(
