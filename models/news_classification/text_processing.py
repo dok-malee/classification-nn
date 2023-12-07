@@ -4,6 +4,9 @@ import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from time import time
 from transformers import BertTokenizer, BertModel
+from gensim.models import Word2Vec
+from nltk.tokenize import word_tokenize
+import numpy as np
 
 
 def size_mb(docs):
@@ -68,7 +71,8 @@ def create_sparse_matrices(train_data, test_data, verbose=False):
     return X_train, X_test, y_train, y_test, feature_names, y_train.unique()
 
 
-def create_dense_embeddings(train_data,test_data, text_column='headline', model_name='bert-base-uncased'):
+def create_dense_embeddings(train_data, test_data, text_column='headline', model_name='bert-base-uncased',
+                            device='cuda'):
     """
     Create dense embeddings using a pre-trained transformer model (e.g., BERT).
 
@@ -95,17 +99,82 @@ def create_dense_embeddings(train_data,test_data, text_column='headline', model_
     # Load pre-trained tokenizer and model
     tokenizer = BertTokenizer.from_pretrained(model_name)
     model = BertModel.from_pretrained(model_name)
+    model.to(device)
 
     # Tokenize and obtain dense embeddings for training data
-    tokenized_train_texts = tokenizer(train_texts.tolist(), padding=True, truncation=True, return_tensors="pt")
+    tokenized_train_texts = tokenizer(train_texts.tolist(), padding=True, truncation=True, return_tensors="pt").to(
+        device)
     with torch.no_grad():
         outputs_train = model(**tokenized_train_texts)
     dense_embeddings_train = outputs_train.last_hidden_state
 
     # Tokenize and obtain dense embeddings for test data
-    tokenized_test_texts = tokenizer(test_texts.tolist(), padding=True, truncation=True, return_tensors="pt")
+    tokenized_test_texts = tokenizer(test_texts.tolist(), padding=True, truncation=True, return_tensors="pt").to(device)
     with torch.no_grad():
         outputs_test = model(**tokenized_test_texts)
     dense_embeddings_test = outputs_test.last_hidden_state
+
+    return dense_embeddings_train, dense_embeddings_test, y_train, y_test
+
+
+def create_word2vec_embeddings(train_data, test_data, text_column='headline', vector_size=100, window=5, min_count=1,
+                               workers=4):
+    """
+    Create Word2Vec embeddings for news classification.
+
+    Parameters:
+    - train_data: List of dictionaries representing training data.
+    - test_data: List of dictionaries representing test data.
+    - text_column: The name of the column containing the text data.
+    - vector_size: Dimensionality of the word embeddings.
+    - window: Maximum distance between the current and predicted word within a sentence.
+    - min_count: Ignores all words with a total frequency lower than this.
+    - workers: Number of CPU cores to use for training.
+
+    Returns:
+    - dense_embeddings_train: Word2Vec embeddings for training data.
+    - dense_embeddings_test: Word2Vec embeddings for test data.
+    - y_train: Labels for training data.
+    - y_test: Labels for test data.
+    """
+
+    # Create DataFrames for easier handling
+    train_df = pd.DataFrame(train_data)
+    test_df = pd.DataFrame(test_data)
+
+    # Extract labels
+    y_train = train_df['category']
+    y_test = test_df['category']
+
+    # Extract text
+    train_texts = [word_tokenize(text) for text in train_df[text_column]]
+    test_texts = [word_tokenize(text) for text in test_df[text_column]]
+
+    # Train Word2Vec model
+    word2vec_model = Word2Vec(sentences=train_texts, vector_size=vector_size, window=window, min_count=min_count,
+                              workers=workers)
+
+    # Get embeddings for training data
+    dense_embeddings_train = []
+    for sentence in train_texts:
+        embeddings = [word2vec_model.wv[word] for word in sentence if word in word2vec_model.wv]
+        if embeddings:
+            dense_embeddings_train.append(np.mean(embeddings, axis=0))
+        else:
+            dense_embeddings_train.append(np.zeros(vector_size))
+
+    dense_embeddings_train = torch.tensor(dense_embeddings_train)
+
+    # Get embeddings for test data
+    dense_embeddings_test = []
+    for sentence in test_texts:
+        embeddings = [word2vec_model.wv[word] for word in sentence if word in word2vec_model.wv]
+        if embeddings:
+            dense_embeddings_test.append(np.mean(embeddings, axis=0))
+        else:
+            # might encounter words in the test data (or any unseen data) that were not part of the training vocabulary
+            dense_embeddings_test.append(np.zeros(vector_size))
+
+    dense_embeddings_test = torch.tensor(dense_embeddings_test)
 
     return dense_embeddings_train, dense_embeddings_test, y_train, y_test

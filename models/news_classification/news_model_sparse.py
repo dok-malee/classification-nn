@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 
 train_file = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
 test_file = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
@@ -49,7 +50,10 @@ def train_model(model, train_loader, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
 
-    for batch in train_loader:
+    # Wrap train_loader with tqdm for the progress bar
+    train_loader_tqdm = tqdm(train_loader, desc='Training', leave=False)
+
+    for batch in train_loader_tqdm:
         inputs = batch['X'].to(device)
         labels = batch['y'].to(device)
 
@@ -66,7 +70,7 @@ def train_model(model, train_loader, criterion, optimizer, device):
 
 
 # Function to evaluate the model on the test set
-def evaluate_model(model, test_loader, criterion, device):
+def evaluate_model(model, test_loader, device):
     model.eval()
     all_preds = []
     all_labels = []
@@ -131,7 +135,7 @@ for epoch in range(epochs):
     print(f'Epoch {epoch + 1}/{epochs}, Training Loss: {train_loss:.4f}')
 
 # Evaluate the model on the test set
-all_preds, all_labels = evaluate_model(model, test_loader, criterion, device)
+all_preds, all_labels = evaluate_model(model, test_loader, device)
 
 
 # Compute the confusion matrix using sklearn
