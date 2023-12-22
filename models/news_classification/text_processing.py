@@ -27,7 +27,7 @@ def load_datasets(train_file, test_file):
     return train_data, test_data
 
 
-def create_sparse_matrices(train_data, test_data, verbose=False):
+def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['headline', 'short_description']):
     """Vectorize the news articles dataset."""
 
     # Create DataFrames for easier handling
@@ -39,8 +39,8 @@ def create_sparse_matrices(train_data, test_data, verbose=False):
     y_test = test_df['category']
 
     # Use only the headline for each article
-    train_docs = train_df['headline']
-    test_docs = test_df['headline']
+    train_docs = train_df[text_columns[0]] + ' ' + train_df[text_columns[1]]
+    test_docs = test_df[text_columns[0]] + ' ' + test_df[text_columns[1]]
 
     # Extracting features from the training data using a sparse vectorizer
     t0 = time()
