@@ -16,7 +16,7 @@ train_file = '../../data/classification_data/data/news/classification/classifica
 test_file = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
 #print(torch.cuda.is_available())
 
-wandb.init(project='news-classification')
+wandb.init(project='news-classification-sparse')
 
 
 # Custom dataset class
@@ -39,13 +39,13 @@ class FFNN(nn.Module):
         super(FFNN, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+        #self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -180,4 +180,4 @@ plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
 # Adjust layout to prevent overlap
 plt.tight_layout()
-plt.savefig('conf_matrix_sparse_comb_no_do.png')
+plt.savefig('conf_matrix_sparse_desc_no_do.png')

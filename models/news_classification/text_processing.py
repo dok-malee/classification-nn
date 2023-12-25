@@ -3,6 +3,8 @@ import pandas as pd
 import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from time import time
+
+from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer, BertModel
 from gensim.models import Word2Vec
 from nltk.tokenize import word_tokenize
@@ -27,7 +29,7 @@ def load_datasets(train_file, test_file):
     return train_data, test_data
 
 
-def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['headline', 'short_description']):
+def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['short_description']):
     """Vectorize the news articles dataset."""
 
     # Create DataFrames for easier handling
@@ -39,8 +41,8 @@ def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['
     y_test = test_df['category']
 
     # Use only the headline for each article
-    train_docs = train_df[text_columns[0]] + ' ' + train_df[text_columns[1]]
-    test_docs = test_df[text_columns[0]] + ' ' + test_df[text_columns[1]]
+    train_docs = train_df[text_columns[0]]
+    test_docs = test_df[text_columns[0]]
 
     # Extracting features from the training data using a sparse vectorizer
     t0 = time()
@@ -118,7 +120,7 @@ def create_dense_embeddings(train_data, test_data, text_column='headline', model
 
 
 def create_word2vec_embeddings(train_data, test_data, text_column='headline', vector_size=100, window=5, min_count=1,
-                               workers=4):
+                               workers=4, validation_size=0.1):
     """
     Create Word2Vec embeddings for news classification.
 
@@ -150,6 +152,8 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
     train_texts = [word_tokenize(text) for text in train_df[text_column]]
     test_texts = [word_tokenize(text) for text in test_df[text_column]]
 
+    train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size, random_state=42)
+
     # Train Word2Vec model
     word2vec_model = Word2Vec(sentences=train_texts, vector_size=vector_size, window=window, min_count=min_count,
                               workers=workers)
@@ -165,6 +169,17 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
 
     dense_embeddings_train = torch.tensor(dense_embeddings_train)
 
+    # Get embeddings for validation data
+    dense_embeddings_val = []
+    for sentence in val_texts:
+        embeddings = [word2vec_model.wv[word] for word in sentence if word in word2vec_model.wv]
+        if embeddings:
+            dense_embeddings_val.append(np.mean(embeddings, axis=0))
+        else:
+            dense_embeddings_val.append(np.zeros(vector_size))
+
+    dense_embeddings_val = torch.tensor(dense_embeddings_val)
+
     # Get embeddings for test data
     dense_embeddings_test = []
     for sentence in test_texts:
@@ -177,4 +192,4 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
 
     dense_embeddings_test = torch.tensor(dense_embeddings_test)
 
-    return dense_embeddings_train, dense_embeddings_test, y_train, y_test
+    return dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test
