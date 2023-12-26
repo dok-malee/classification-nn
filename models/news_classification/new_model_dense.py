@@ -53,6 +53,10 @@ class FFNN(nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         x = self.fc2(x)
+        x = self.batch_norm2(x)
+        x = self.relu2(x)
+        x = self.dropout2(x)
+        x = self.fc3(x)
         return x
 
 
@@ -113,8 +117,7 @@ if __name__ == '__main__':
     # Create dense embeddings using word2vec
     dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test = create_word2vec_embeddings(train_data=train_docs,
                                                                                                 test_data=test_docs,
-                                                                                                text_column='headline',
-                                                                                                vector_size=50)
+                                                                                                vector_size=100)
     # Cast dense embeddings to torch.float32 to match the model's default data type
     dense_embeddings_train = dense_embeddings_train.to(torch.float32)
     dense_embeddings_test = dense_embeddings_test.to(torch.float32)
@@ -124,9 +127,9 @@ if __name__ == '__main__':
     print(f"Train Dense Embeddings Shape: {dense_embeddings_train.shape}")
     print(f"Test Dense Embeddings Shape: {dense_embeddings_test.shape}")
 
-    input_size = 50  # Dimensionality of your dense embeddings
+    input_size = 100  # Dimensionality of your dense embeddings
     hidden_size = 512
-    hidden_size2 = 256
+    hidden_size2 = 512
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
     batch_size = 64
     learning_rate = 0.001
@@ -182,7 +185,7 @@ if __name__ == '__main__':
     wandb.log({'precision_test': precision_test, 'recall_test': recall_test, 'f1_test': f1_test})
     wandb.finish()
 
-    conf_matrix_dense = sk_confusion_matrix(all_labels_dense, all_preds_dense, labels=range(output_size))
+    conf_matrix_dense = sk_confusion_matrix(all_labels_dense_test, all_preds_dense_test, labels=range(output_size))
     conf_matrix_percentage_dense = conf_matrix_dense / (conf_matrix_dense.sum(axis=1, keepdims=True) + 1e-10)
 
     # Plot the confusion matrix for dense embeddings
@@ -194,4 +197,4 @@ if __name__ == '__main__':
     plt.title('Confusion Matrix for Dense Embeddings')
     # Adjust layout to prevent overlap
     plt.tight_layout()
-    plt.savefig('conf_matrix_dense_headlines_no_do.png')
+    plt.savefig('conf_matrix_dense_headlines_512_512_e25.png')

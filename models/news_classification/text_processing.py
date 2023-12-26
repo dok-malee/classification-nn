@@ -135,8 +135,10 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
 
     Returns:
     - dense_embeddings_train: Word2Vec embeddings for training data.
+    - dense_embeddings_val: Word2Vec embeddings for validation data.
     - dense_embeddings_test: Word2Vec embeddings for test data.
     - y_train: Labels for training data.
+    - y_val: Labels for validation data.
     - y_test: Labels for test data.
     """
 
@@ -148,9 +150,12 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
     y_train = train_df['category']
     y_test = test_df['category']
 
-    # Extract text
-    train_texts = [word_tokenize(text) for text in train_df[text_column]]
-    test_texts = [word_tokenize(text) for text in test_df[text_column]]
+    # Extract text //  + ' ' + row[text_column[1]]
+    train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
+    test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
+
+    #train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
+    #test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
 
     train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size, random_state=42)
 
