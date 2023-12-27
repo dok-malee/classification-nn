@@ -17,27 +17,35 @@ def load_dataset(path):
     return instances, labels_author, labels_lang
 
 
-def create_sparse_vectors(instances, max_docfreq, min_docfreq):
+def create_sparse_vectors(train_instances, test_instances, max_docfreq, min_docfreq):
     # https://scikit-learn.org/stable/auto_examples/text/plot_document_classification_20newsgroups.html#sphx-glr-auto-examples-text-plot-document-classification-20newsgroups-py
     "create tf-idf vector representations, instances: list of str"
     vectorizer = TfidfVectorizer(max_df=max_docfreq, min_df=min_docfreq) # no stopwords filter as we are dealing with a variety of languages 
-    X_sparse = vectorizer.fit_transform(instances)
-    return X_sparse
+    x_train = vectorizer.fit_transform(train_instances)
+    x_test = vectorizer.transform(test_instances)
 
+    feature_names = vectorizer.get_feature_names_out()
+    #print(feature_names)
+    return x_train, x_test
 
 if __name__ == '__main__':
     # paths to files
     path_to_train_file = "/Users/sarahannauffelmann/desktop/01_WiSe23:24/Seminar Klassifizierung/Projekt FFNN/letters/classifier_data_train.jsonl"
     path_to_test_file = "/Users/sarahannauffelmann/desktop/01_WiSe23:24/Seminar Klassifizierung/Projekt FFNN/letters/classifier_data_eval.jsonl"
     
-    # training data
+    # training and test data
     train_inst, train_author_labels, train_lang_labels = load_dataset(path_to_train_file)
-    
-    # test data
     test_inst, test_author_labels, test_lang_labels = load_dataset(path_to_test_file)
 
     # sparse vectors
-    train_vectors_sparse = create_sparse_vectors(train_inst, 0.5, 5)
-    test_vectors_sparse = create_sparse_vectors(test_inst, 0.5, 5)
-    #print(train_vectors_sparse)
-    #print(test_vectors_sparse)
+    x_train_sparse, x_test_sparse = create_sparse_vectors(train_inst, test_inst, 0.5, 5)
+
+    # labels author classification
+    y_train_author = train_author_labels
+    y_test_author = test_author_labels
+
+    # labels language identification
+    y_train_lang= train_lang_labels
+    y_test_lang = test_lang_labels
+
+    
