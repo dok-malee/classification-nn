@@ -1,7 +1,8 @@
+import wandb
 from sklearn.preprocessing import LabelEncoder
 
 from text_processing import create_sparse_matrices, load_datasets
-from sklearn.metrics import confusion_matrix as sk_confusion_matrix
+from sklearn.metrics import confusion_matrix as sk_confusion_matrix, precision_score, recall_score, f1_score
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,6 +15,8 @@ from tqdm import tqdm
 train_file = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
 test_file = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
 #print(torch.cuda.is_available())
+
+wandb.init(project='news-classification-sparse')
 
 
 # Custom dataset class
@@ -36,11 +39,13 @@ class FFNN(nn.Module):
         super(FFNN, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
+        #self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
+        #x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -106,11 +111,20 @@ X_test_sparse = torch.sparse_coo_tensor(
 
 # Hyperparameters
 input_size = X_train_sparse.shape[1]
-hidden_size = 256
+hidden_size = 512
 output_size = len(target_names)
 batch_size = 64
 learning_rate = 0.001
-epochs = 10
+epochs = 25
+
+wandb.config.update({
+    'input_size': input_size,
+    'hidden_size': hidden_size,
+    'output_size': output_size,
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'epochs': epochs
+})
 
 # Create datasets and data loaders
 train_dataset = SparseDataset(X_train_sparse, y_train)
@@ -129,14 +143,27 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 model.to(device)
 
+# Log model architecture
+wandb.watch(model)
+
 # Training loop
 for epoch in range(epochs):
     train_loss = train_model(model, train_loader, criterion, optimizer, device)
     print(f'Epoch {epoch + 1}/{epochs}, Training Loss: {train_loss:.4f}')
 
+    # Log training loss to WandB
+    wandb.log({'train_loss': train_loss})
+
 # Evaluate the model on the test set
 all_preds, all_labels = evaluate_model(model, test_loader, device)
 
+precision = precision_score(all_labels, all_preds, average='weighted')
+recall = recall_score(all_labels, all_preds, average='weighted')
+f1 = f1_score(all_labels, all_preds, average='weighted')
+
+# Log evaluation metrics to WandB
+wandb.log({'precision': precision, 'recall': recall, 'f1': f1})
+wandb.finish()
 
 # Compute the confusion matrix using sklearn
 conf_matrix = sk_confusion_matrix(all_labels, all_preds, labels=range(output_size))
@@ -153,4 +180,4 @@ plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
 # Adjust layout to prevent overlap
 plt.tight_layout()
-plt.savefig('confusion_matrix_sparse_headlines.png')
+plt.savefig('conf_matrix_sparse_desc_no_do.png')
