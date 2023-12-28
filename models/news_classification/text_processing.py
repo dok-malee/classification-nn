@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from time import time
 
 from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer, BertModel
+from transformers import BertTokenizer, BertModel, AutoTokenizer, AutoModel
 from gensim.models import Word2Vec
 from nltk.tokenize import word_tokenize
 import numpy as np
@@ -29,7 +29,7 @@ def load_datasets(train_file, test_file):
     return train_data, test_data
 
 
-def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['short_description']):
+def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['headline', 'short_description']):
     """Vectorize the news articles dataset."""
 
     # Create DataFrames for easier handling
@@ -40,13 +40,17 @@ def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['
     y_train = train_df['category']
     y_test = test_df['category']
 
-    # Use only the headline for each article
-    train_docs = train_df[text_columns[0]]
-    test_docs = test_df[text_columns[0]]
+    # Use only one source for each article
+    #train_docs = train_df[text_columns[0]]
+    #test_docs = test_df[text_columns[0]]
+
+    # Merge text from specified columns
+    train_docs = train_df[text_columns[0]] + ' ' + train_df[text_columns[1]]
+    test_docs = test_df[text_columns[0]] + ' ' + test_df[text_columns[1]]
 
     # Extracting features from the training data using a sparse vectorizer
     t0 = time()
-    vectorizer = TfidfVectorizer(sublinear_tf=True, max_df=0.5, min_df=5, stop_words="english")
+    vectorizer = TfidfVectorizer(sublinear_tf=False, max_df=1.0, min_df=1, stop_words="english")
     X_train = vectorizer.fit_transform(train_docs)
     duration_train = time() - t0
 
@@ -123,6 +127,7 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
                                workers=4, validation_size=0.1):
     """
     Create Word2Vec embeddings for news classification.
+    Uses skip-gram model per default.
 
     Parameters:
     - train_data: List of dictionaries representing training data.
@@ -140,6 +145,7 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
     - y_train: Labels for training data.
     - y_val: Labels for validation data.
     - y_test: Labels for test data.
+    - y_train.unique(): Set of Labels for training data
     """
 
     # Create DataFrames for easier handling
@@ -150,10 +156,11 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
     y_train = train_df['category']
     y_test = test_df['category']
 
-    # Extract text //  + ' ' + row[text_column[1]]
+    # Extract text: Use this if you only have one source
     train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
     test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
 
+    # multiple sources merged
     #train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
     #test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
 
@@ -197,4 +204,24 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
 
     dense_embeddings_test = torch.tensor(dense_embeddings_test)
 
-    return dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test
+    return dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, y_train.unique()
+
+def get_transformer_embeddings(texts):
+    """
+    Get word embeddings using Pre-Trained Transformer miniLM
+
+    Parameters:
+        - texts: list of strings, text list of the training or evaluation dataset.
+    Returns:
+        - output: pytorch tensors of word embeddings in each sentence
+    """
+
+    miniLM_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
+    miniLM_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
+    print("miniLM Transformer loaded")
+    inputs = miniLM_tokenizer(texts, padding="max_length", max_length=512, truncation=True, return_tensors="pt")
+    # print("Tokenizer input shape:", inputs["input_ids"].shape)
+    # print(inputs)
+    outputs = miniLM_model(**inputs)
+
+    return outputs

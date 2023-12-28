@@ -1,8 +1,11 @@
 # Load and preprocess data
+from transformers import DistilBertModel, DistilBertTokenizer
+
 import wandb
 from tqdm import tqdm
 import pandas as pd
 from models.news_classification.text_processing import load_datasets, create_word2vec_embeddings
+from models.get_word_vectors import get_transformer_embeddings
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix as sk_confusion_matrix, precision_score, recall_score, f1_score, \
     classification_report
@@ -85,7 +88,7 @@ def train_model(model, train_loader, criterion, optimizer, device):
     return running_loss / len(train_loader)
 
 
-def evaluate_model(model, test_loader, device, is_val=False):
+def evaluate_model(model, test_loader, device, is_val=False, val_loader=None):
     model.eval()
     all_preds = []
     all_labels = []
@@ -116,14 +119,45 @@ def evaluate_model(model, test_loader, device, is_val=False):
 if __name__ == '__main__':
     train_docs, test_docs = load_datasets(train_file, test_file)
 
-    # Create dense embeddings using word2vec
-    dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, target_names = create_word2vec_embeddings(train_data=train_docs,
-                                                                                                                                           test_data=test_docs,
-                                                                                                                                           vector_size=100)
-    # Cast dense embeddings to torch.float32 to match the model's default data type
-    dense_embeddings_train = dense_embeddings_train.to(torch.float32)
-    dense_embeddings_test = dense_embeddings_test.to(torch.float32)
-    dense_embeddings_val = dense_embeddings_val.to(torch.float32)
+    train_df = pd.DataFrame(train_docs)
+    test_df = pd.DataFrame(test_docs)
+
+    y_train = train_df['category']
+    y_test = test_df['category']
+
+    train_texts = (train_df['headline'] + ' ' + train_df['short_description']).tolist()
+    test_texts = (test_df['headline'] + ' ' + test_df['short_description']).tolist()
+
+    transformer_model = DistilBertModel.from_pretrained('distilbert-base-uncased')
+    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+
+    # Tokenize and obtain embeddings for train and test texts
+    train_inputs = tokenizer(train_texts, return_tensors='pt', truncation=True, padding=True)
+    test_inputs = tokenizer(test_texts, return_tensors='pt', truncation=True, padding=True)
+
+    # Forward pass through the transformer model to obtain embeddings
+    train_embeddings = []
+    for i in range(0, len(train_texts), 8):
+        batch_texts = train_texts[i:i + 8]
+        batch_inputs = tokenizer(batch_texts, return_tensors='pt', truncation=True, padding=True)
+        batch_embeddings = transformer_model(**batch_inputs).last_hidden_state.mean(dim=1)
+        train_embeddings.append(batch_embeddings)
+
+    train_embeddings = torch.cat(train_embeddings, dim=0)
+
+    print("Train embeddings created")
+
+    test_embeddings = []
+    for i in range(0, len(test_texts), 8):
+        batch_texts = test_texts[i:i + 8]
+        batch_inputs = tokenizer(batch_texts, return_tensors='pt', truncation=True, padding=True)
+        batch_embeddings = transformer_model(**batch_inputs).last_hidden_state.mean(dim=1)
+        test_embeddings.append(batch_embeddings)
+
+    test_embeddings = torch.cat(test_embeddings, dim=0)
+
+    dense_embeddings_train = train_embeddings.to(torch.float32)
+    dense_embeddings_test = test_embeddings.to(torch.float32)
 
     # Print shape of dense embeddings
     print(f"Train Dense Embeddings Shape: {dense_embeddings_train.shape}")
@@ -140,10 +174,8 @@ if __name__ == '__main__':
     # Create datasets and data loaders for embeddings
     train_dataset_dense = DenseDataset(embeddings=dense_embeddings_train, labels=y_train)
     test_dataset_dense = DenseDataset(embeddings=dense_embeddings_test, labels=y_test)
-    val_dataset_dense = DenseDataset(embeddings=dense_embeddings_val, labels=y_val)
 
     train_loader = DataLoader(train_dataset_dense, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset_dense, batch_size=batch_size, shuffle=False)
     test_loader_dense = DataLoader(test_dataset_dense, batch_size=batch_size, shuffle=False)
 
     model_dense = FFNN(input_size, hidden_size, hidden_size2, output_size)
@@ -162,16 +194,6 @@ if __name__ == '__main__':
         print(f'Epoch {epoch + 1}/{epochs}, Training Loss: {train_loss:.4f}')
         wandb.log({'train_loss': train_loss})
 
-        # Evaluate the model on val set
-        all_preds_dense, all_labels_dense = evaluate_model(model_dense, val_loader, device, is_val=True)
-
-        precision = precision_score(all_labels_dense, all_preds_dense, average='weighted')
-        recall = recall_score(all_labels_dense, all_preds_dense, average='weighted')
-        f1 = f1_score(all_labels_dense, all_preds_dense, average='weighted')
-
-        # Log evaluation metrics to WandB
-        wandb.log({'precision_val': precision, 'recall_val': recall, 'f1_val': f1})
-
         # Adjust the learning rate
         scheduler.step()
 
@@ -180,9 +202,9 @@ if __name__ == '__main__':
     all_preds_dense_test, all_labels_dense_test = evaluate_model(model_dense, test_loader_dense, device)
 
     # Create classification report
-    classification_rep = classification_report(all_labels_dense_test, all_preds_dense_test, target_names=target_names, digits=4, output_dict=True)
+    classification_rep = classification_report(all_labels_dense_test, all_preds_dense_test, target_names=y_train.unique(), digits=4, output_dict=True)
     print("Classification Report:")
-    print(classification_report(all_labels_dense_test, all_preds_dense_test, target_names=target_names, digits=4))
+    print(classification_report(all_labels_dense_test, all_preds_dense_test, target_names=y_train.unique(), digits=4))
 
     plt.figure(figsize=(21, 18))
     sns.heatmap(pd.DataFrame(classification_rep).iloc[:-1, :].T, annot=True, fmt=".4f", cmap="Blues")
@@ -191,8 +213,7 @@ if __name__ == '__main__':
     plt.ylabel("Categories")
 
     # Save the figure as a PNG
-    plt.savefig("news_word2vec_report.png")
-
+    plt.savefig("news_transformer_report.png")
 
     precision_test = precision_score(all_labels_dense_test, all_preds_dense_test, average='weighted')
     recall_test = recall_score(all_labels_dense_test, all_preds_dense_test, average='weighted')
@@ -214,4 +235,4 @@ if __name__ == '__main__':
     plt.title('Confusion Matrix for Dense Embeddings')
     # Adjust layout to prevent overlap
     plt.tight_layout()
-    plt.savefig('conf_matrix_word2vec_512_512_e25.png')
+    plt.savefig('conf_matrix_transformer_512_512_e25.png')

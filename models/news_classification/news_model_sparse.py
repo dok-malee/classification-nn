@@ -1,9 +1,10 @@
 import wandb
 from sklearn.preprocessing import LabelEncoder
-
+from sklearn.metrics import classification_report
 from text_processing import create_sparse_matrices, load_datasets
 from sklearn.metrics import confusion_matrix as sk_confusion_matrix, precision_score, recall_score, f1_score
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,9 +15,9 @@ from tqdm import tqdm
 
 train_file = '../../data/classification_data/data/news/classification/classification_news_train.jsonl'
 test_file = '../../data/classification_data/data/news/classification/classification_news_eval.jsonl'
-#print(torch.cuda.is_available())
+# print(torch.cuda.is_available())
 
-wandb.init(project='news-classification-sparse')
+wandb.init(project='news-classification-sparse-2')
 
 
 # Custom dataset class
@@ -35,18 +36,28 @@ class SparseDataset(Dataset):
 
 # Define the Feedforward Neural Network model
 class FFNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, hidden_size2, output_size):
         super(FFNN, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
+        self.batch_norm = nn.BatchNorm1d(hidden_size)
         self.relu = nn.ReLU()
-        #self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(hidden_size, hidden_size2)
+        self.batch_norm2 = nn.BatchNorm1d(hidden_size2)
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc3 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
         x = self.fc1(x)
+        x = self.batch_norm(x)
         x = self.relu(x)
-        #x = self.dropout(x)
+        x = self.dropout(x)
         x = self.fc2(x)
+        x = self.batch_norm2(x)
+        x = self.relu2(x)
+        x = self.dropout2(x)
+        x = self.fc3(x)
         return x
 
 
@@ -93,8 +104,11 @@ def evaluate_model(model, test_loader, device):
 
     return all_preds, all_labels
 
+
 train_data, test_data = load_datasets(train_file, test_file)
-X_train, X_test, y_train, y_test, feature_names, target_names = create_sparse_matrices(train_data=train_data, test_data=test_data, verbose=True)
+X_train, X_test, y_train, y_test, feature_names, target_names = create_sparse_matrices(train_data=train_data,
+                                                                                       test_data=test_data,
+                                                                                       verbose=True)
 
 # Convert sparse matrices to PyTorch sparse tensors
 X_train_sparse = torch.sparse_coo_tensor(
@@ -112,10 +126,11 @@ X_test_sparse = torch.sparse_coo_tensor(
 # Hyperparameters
 input_size = X_train_sparse.shape[1]
 hidden_size = 512
+hidden_size2 = 512
 output_size = len(target_names)
 batch_size = 64
 learning_rate = 0.001
-epochs = 25
+epochs = 20
 
 wandb.config.update({
     'input_size': input_size,
@@ -129,12 +144,11 @@ wandb.config.update({
 # Create datasets and data loaders
 train_dataset = SparseDataset(X_train_sparse, y_train)
 test_dataset = SparseDataset(X_test_sparse, y_test)
-
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Initialize the model, loss function, and optimizer
-model = FFNN(input_size, hidden_size, output_size)
+model = FFNN(input_size, hidden_size, hidden_size2, output_size)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -157,11 +171,24 @@ for epoch in range(epochs):
 # Evaluate the model on the test set
 all_preds, all_labels = evaluate_model(model, test_loader, device)
 
+# Get classification report
+classification_rep = classification_report(all_labels, all_preds, target_names=target_names, digits=4, output_dict=True)
+print("Classification Report:")
+print(classification_report(all_labels, all_preds, target_names=target_names, digits=4))
+
+plt.figure(figsize=(21, 18))
+sns.heatmap(pd.DataFrame(classification_rep).iloc[:-1, :].T, annot=True, fmt=".4f", cmap="Blues")
+plt.title("Classification Report")
+plt.xlabel("Metrics")
+plt.ylabel("Categories")
+
+# Save the figure as a PNG
+plt.savefig("news_sparse_report.png")
+
+
 precision = precision_score(all_labels, all_preds, average='weighted')
 recall = recall_score(all_labels, all_preds, average='weighted')
 f1 = f1_score(all_labels, all_preds, average='weighted')
-
-# Log evaluation metrics to WandB
 wandb.log({'precision': precision, 'recall': recall, 'f1': f1})
 wandb.finish()
 
