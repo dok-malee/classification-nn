@@ -1,5 +1,7 @@
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
+import torch
+import numpy as np
 
 
 def load_dataset(path):
@@ -27,6 +29,16 @@ def create_sparse_vectors(train_instances, test_instances, max_docfreq, min_docf
     feature_names = vectorizer.get_feature_names_out()
     #print(feature_names)
     return x_train, x_test
+
+def sparse_to_Tensor(sparse_features):
+    """convert the sparse matrix and label lists into pytorch tensor"""
+    sparse_tensor = torch.sparse_coo_tensor(
+        torch.LongTensor(np.vstack(sparse_features.nonzero())),
+        torch.FloatTensor(sparse_features.data),
+        torch.Size(sparse_features.shape),
+    )
+    return sparse_tensor
+
 
 if __name__ == '__main__':
     # paths to files
