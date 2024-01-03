@@ -7,6 +7,9 @@ import torch
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from gensim.models import Word2Vec
+from nltk.tokenize import word_tokenize
+from typing import Dict
 import nltk
 from torch.nn.utils.rnn import pad_sequence
 # nltk.download('punkt')
@@ -24,6 +27,31 @@ def load_datasets(train_file, test_file):
 
     return train_data, test_data
 
+def get_vocab(train_texts, unk_threshold=0) -> Dict[str, int]:
+    '''
+    If directly use the embedding layer in the FFNN to get the embeddings, get_vocab function is called.
+    Makes a dictionary of words given a list of tokenized sentences.
+    :param train_texts: List of strings
+    :param unk_threshold: All words below this count threshold are excluded from dictionary and replaced with UNK
+    :return: A dictionary of string keys and index values
+    '''
+    tokenized_train_texts = [word_tokenize(sent) for sent in train_texts]
+    # First count the frequency of each distinct ngram
+    word_frequencies = {}
+    for sent in tokenized_train_texts:
+        for word in sent:
+            if word not in word_frequencies:
+                word_frequencies[word] = 0
+            word_frequencies[word] += 1
+
+    # Assign indices to each distinct ngram
+    word_to_ix = {'<PAD>': 0, '<UNK>': 1}
+    for word, freq in word_frequencies.items():
+        if freq > unk_threshold:  # only add words that are above threshold
+            word_to_ix[word] = len(word_to_ix)
+    # Print some info on dictionary size
+    print(f"At unk_threshold={unk_threshold}, the dictionary contains {len(word_to_ix)} words")
+    return word_to_ix
 
 def get_tfidf_metrix(train_texts, eval_texts, hyper_param={'max_features': None, 'max_df': 1, 'min_df': 1}):
     """
@@ -41,10 +69,12 @@ def get_tfidf_metrix(train_texts, eval_texts, hyper_param={'max_features': None,
         max_df=hyper_param.get('max_df',1),
         min_df=hyper_param.get('min_df', 1))
 
+
     train_sparse_matrix = vectorizer.fit_transform(train_texts)
     eval_sparse_matrix = vectorizer.transform(eval_texts)
+    vocab = enumerate(vectorizer.get_feature_names_out())
 
-    return train_sparse_matrix, eval_sparse_matrix
+    return vocab, train_sparse_matrix, eval_sparse_matrix
 
 
 def sparse_to_Tensor(sparse_features):
@@ -56,6 +86,24 @@ def sparse_to_Tensor(sparse_features):
     )
     return sparse_tensor
 
+
+def get_word2vec_embeddings(train_texts, vector_size=100, window=5, min_count=1, workers=4, vocab_size=10000):
+    train_texts_sents = [word_tokenize(sent) for sent in train_texts]
+    # print(train_texts_sents)
+    '''if we use the word2vec matrix trained with training data on the test data:'''
+    word2vec_model = Word2Vec(sentences=train_texts_sents, vector_size=vector_size, window=window, min_count=min_count,
+             workers=workers, max_vocab_size=vocab_size)
+
+    # Get embeddings for the vocabulary
+    word2vec_word2idx = word2vec_model.wv.key_to_index # dictionary: word to index
+    word2vec_word2idx['<UNK>'] = len(word2vec_word2idx)
+    word2vec_word2idx['<PAD>'] = len(word2vec_word2idx)
+    unk_token_embedding = np.zeros(word2vec_model.vector_size)
+    pad_token_embedding = np.zeros(word2vec_model.vector_size)
+    all_vectors = np.vstack([word2vec_model.wv.vectors, unk_token_embedding, pad_token_embedding])
+    dense_embeddings = torch.tensor(all_vectors).to(torch.float32)
+    # print(word2idx)
+    return word2vec_word2idx, dense_embeddings
 
 
 
@@ -138,9 +186,13 @@ if __name__ == "__main__":
     # get_tfidf_metrix(letter_train_texts[:5], letter_eval_texts[:5])
     # get_tfidf_metrix(news_train_headline[:5], news_eval_headline[:5])
     # get_tfidf_metrix(news_train_description[:5], news_eval_description[:5])
-    sentiment_train_tfidf, sentiment_eval_tfidf = get_tfidf_metrix(sentiment_train_texts[:5],  sentiment_eval_texts[:5])
+    tfidf_vocab, sentiment_train_tfidf, sentiment_eval_tfidf = get_tfidf_metrix(sentiment_train_texts[:5], sentiment_eval_texts[:5])
     sentiment_train_tfidf_sparse = sparse_to_Tensor(sentiment_train_tfidf)
-    print(sentiment_train_tfidf_sparse)
+    print('sentiment_tf-df_sparse:', sentiment_train_tfidf_sparse)
+
+    """get word2vec matrix from training data"""
+    sentiment_word2vex_word2idx, sentiment_word2vec_matrix = get_word2vec_embeddings(sentiment_train_texts[:5])
+    print("sentiment_word2vec:", sentiment_word2vex_word2idx, sentiment_word2vec_matrix)
 
 
     """get_transformer_embeddings of train and eval data"""
@@ -148,9 +200,9 @@ if __name__ == "__main__":
     # get_transformer_embeddings(news_train_headline[:5])
     #gpu_properties = torch.cuda.get_device_properties(0)  # Use 0 if you have a single GPU
     #print(gpu_properties)
-    news_embeddings = get_tinybert_embeddings(news_train_description)
-    sentiment_train_LM_embeds = get_transformer_embeddings(sentiment_train_texts[:5])
-    print(sentiment_train_LM_embeds)
+    # news_embeddings = get_tinybert_embeddings(news_train_description)
+    # sentiment_train_LM_embeds = get_transformer_embeddings(sentiment_train_texts[:5])
+    # print(sentiment_train_LM_embeds)
 
 
 
