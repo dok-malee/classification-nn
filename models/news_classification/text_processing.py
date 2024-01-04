@@ -123,7 +123,7 @@ def create_dense_embeddings(train_data, test_data, text_column='headline', model
     return dense_embeddings_train, dense_embeddings_test, y_train, y_test
 
 
-def create_word2vec_embeddings(train_data, test_data, text_column='headline', vector_size=100, window=5, min_count=1,
+def create_word2vec_embeddings(train_data, test_data, text_column=['headline', 'short_description'], vector_size=300, window=10, min_count=1,
                                workers=4, validation_size=0.1):
     """
     Create Word2Vec embeddings for news classification.
@@ -157,12 +157,12 @@ def create_word2vec_embeddings(train_data, test_data, text_column='headline', ve
     y_test = test_df['category']
 
     # Extract text: Use this if you only have one source
-    train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
-    test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
+    #train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
+    #test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
 
     # multiple sources merged
-    #train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
-    #test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
+    train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
+    test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
 
     train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size, random_state=42)
 

@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # Create dense embeddings using word2vec
     dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, target_names = create_word2vec_embeddings(train_data=train_docs,
                                                                                                                                            test_data=test_docs,
-                                                                                                                                           vector_size=100)
+                                                                                                                                           vector_size=300)
     # Cast dense embeddings to torch.float32 to match the model's default data type
     dense_embeddings_train = dense_embeddings_train.to(torch.float32)
     dense_embeddings_test = dense_embeddings_test.to(torch.float32)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print(f"Train Dense Embeddings Shape: {dense_embeddings_train.shape}")
     print(f"Test Dense Embeddings Shape: {dense_embeddings_test.shape}")
 
-    input_size = 100  # Dimensionality of your dense embeddings
+    input_size = 300  # Dimensionality of your dense embeddings
     hidden_size = 512
     hidden_size2 = 512
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
@@ -214,4 +214,4 @@ if __name__ == '__main__':
     plt.title('Confusion Matrix for Dense Embeddings')
     # Adjust layout to prevent overlap
     plt.tight_layout()
-    plt.savefig('conf_matrix_word2vec_512_512_e25.png')
+    plt.savefig('conf_matrix_word2vec_v300_window10.png')
