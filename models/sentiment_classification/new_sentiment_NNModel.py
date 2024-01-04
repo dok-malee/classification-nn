@@ -13,7 +13,7 @@ from nltk import word_tokenize
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
-
+import sklearn
 
 class FFNN_with_tfidf(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size):
@@ -75,14 +75,16 @@ class FFNN_with_embeddings(nn.Module):
         return x
 
 
-
+miniLM_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
+miniLM_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
 
 
 class FFNN_with_Transformer(nn.Module):
-    def __init__(self, tokenizer_model, transformer_model, hidden_sizes, output_size):
+    def __init__(self, hidden_sizes, output_size, tokenizer_model=miniLM_tokenizer, transformer_model=miniLM_model):
         super(FFNN_with_Transformer, self).__init__()
-        self.transformer_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
-        self.transformer_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
+        self.transformer_tokenizer = tokenizer_model
+        self.transformer_model = transformer_model
+        self.fc1 = nn.Linear(384, hidden_sizes[0])
         # multiple hidden layers
         self.hidden_layers = nn.ModuleList([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]) for i in range(len(hidden_sizes)-1)])
         # last hidden layer
@@ -91,16 +93,17 @@ class FFNN_with_Transformer(nn.Module):
         for param in self.transformer_model.encoder.layer.parameters():
                 param.requires_grad = False
 
-    def forward(self, input):
+    def forward(self, input_ids, attention_mask):
         # get input_ids and attention_mask for each input
-        tokens = self.transformer_tokenizer(input, padding="max_length", max_length=256, truncation=True, return_tensors="pt")
-        input_ids = tokens["input_ids"]
-        attention_mask = tokens["attention_mask"]
+        # tokens = self.transformer_tokenizer(input, padding="max_length", max_length=256, truncation=True, return_tensors="pt")
+        # input_ids = tokens["input_ids"]
+        # attention_mask = tokens["attention_mask"]
         transformer_output = self.transformer_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
 
         # take the [CLS] token of each sequence as the representation of the whole sequence
         x = transformer_output[:, 0, :]
         # hidden layer forward
+        x = self.leakyrelu(self.fc1(x))
         for layer in self.hidden_layers:
             x = self.leakyrelu(layer(x))
         # the last hidden layer to output
@@ -131,7 +134,46 @@ def train_model(x, y, model, opt, loss_fn, batch_size=32, epochs = 1000):
         if (epoch+1) % 100 == 0:
             print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, epochs, average_loss))
 
-def predict(model, inputs, labels):
+
+def get_batches_for_transformer(texts, labels, batch_size, shuffle=True):
+    n = len(texts)
+    indices = [i for i in range(n)]
+    if shuffle:
+        indices = sklearn.utils.shuffle(indices)
+
+    for start_i in range(0, n, batch_size):
+        # get batch_texts, batch_labels
+        end_i = min(n, start_i + batch_size)
+        batch_indices = indices[start_i: end_i]
+        batch_texts = [texts[i] for i in batch_indices]
+        batch_labels = torch.tensor([labels[i] for i in batch_indices])
+        batch_inputs = miniLM_tokenizer(batch_texts, padding="max_length", max_length=256, truncation=True, return_tensors="pt")
+        batch_input_ids = batch_inputs["input_ids"]
+        batch_attention_mask = batch_inputs["attention_mask"]
+        yield batch_input_ids, batch_attention_mask, batch_labels
+
+def train_model_transformer(x, y, model, opt, loss_fn, batch_size=32, epochs = 1000): # x: list of strings
+    for epoch in range(epochs):
+        total_loss = 0.0
+        train_input = list(get_batches_for_transformer(x, y, batch_size=batch_size))
+        batch_num = len(train_input)
+        for batch in train_input:
+            opt.zero_grad()
+            input_ids, attention_mask, labels = batch
+            # print("Inputs shape: ",inputs.shape)
+            outputs = model(input_ids, attention_mask)
+            # print("outputs.shape", outputs.shape)
+            loss = loss_fn(outputs, labels)
+            loss.backward()
+            opt.step()
+
+            total_loss += loss.item()
+        average_loss = total_loss / batch_num
+
+        if (epoch + 1) % 1 == 0:
+            print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch + 1, epochs, average_loss))
+
+def predict(model, inputs):
     # a function that produces the prediction for each example might be helpful
     # to speed things up, you can also use mini-batches here
     predictions = []
@@ -142,3 +184,17 @@ def predict(model, inputs, labels):
         predictions.extend(prediction.tolist())
     model.train()
     return predictions
+
+def predict_transformer(model, texts, labels, batch_size, shuffle=True):
+    model.eval()
+    batches = list(get_batches_for_transformer(texts, labels, batch_size=batch_size, shuffle=shuffle))
+    predictions = []
+    with torch.no_grad():
+        for batch in batches:
+            input_ids, mask_attention, labels = batch
+            outputs = model(input_ids, mask_attention)
+            _, prediction = torch.max(outputs, 1)
+            predictions.extend(prediction.tolist())
+    model.train()
+    return predictions
+

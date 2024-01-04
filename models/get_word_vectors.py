@@ -107,8 +107,7 @@ def get_word2vec_embeddings(train_texts, vector_size=100, window=5, min_count=1,
 
 
 
-
-def get_transformer_embeddings(texts):
+def get_transformer_embeddings(batch_texts):
     """
     Get word embeddings using Pre-Trained Transformer miniLM
 
@@ -121,7 +120,7 @@ def get_transformer_embeddings(texts):
     miniLM_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
     miniLM_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
     print("miniLM Transformer loaded")
-    inputs = miniLM_tokenizer(texts, padding="max_length", max_length=256, truncation=True, return_tensors="pt")
+    inputs = miniLM_tokenizer(batch_texts, padding="max_length", max_length=256, truncation=True, return_tensors="pt")
     # print("Tokenizer input shape:", inputs["input_ids"].shape)
     # print(inputs)
     outputs = miniLM_model(**inputs)

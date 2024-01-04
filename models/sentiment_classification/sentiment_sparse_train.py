@@ -28,7 +28,7 @@ sentiment_eval_df = pd.DataFrame(sentiment_eval_data)
 # get the texts in train_dataset and eval_dataset
 # sentiment_train_texts = sentiment_train_df['text'].tolist()
 # sentiment_eval_texts = sentiment_eval_df['text'].tolist()
-sentiment_train_texts = sentiment_train_df['text'].tolist()[:1000]
+sentiment_train_texts = sentiment_train_df['text'].tolist()[:5000]
 sentiment_eval_texts = sentiment_eval_df['text'].tolist()
 
 # get tfidf sparse metrics and transformer dense metrics
@@ -43,7 +43,7 @@ eval_tfidf_tensor = sparse_to_Tensor(eval_tfidf)
 
 """get y"""
 # encode the labels
-y_train_sent = sentiment_train_df['sentiment'].tolist()[:1000]
+y_train_sent = sentiment_train_df['sentiment'].tolist()[:5000]
 y_eval_sent = sentiment_eval_df['sentiment'].tolist()
 
 label_encoder = LabelEncoder()
@@ -74,12 +74,12 @@ train_model(train_tfidf_tensor, Y_train, tfidf_model, optimizer, criterion, batc
 
 
 """check the accuracy on training and test data"""
-Y_pred_train = predict(tfidf_model, train_tfidf_tensor, Y_train)
-Y_pred_test = predict(tfidf_model, eval_tfidf_tensor, Y_eval)
+Y_pred_train = predict(tfidf_model, train_tfidf_tensor)
+Y_pred_test = predict(tfidf_model, eval_tfidf_tensor)
 
 accuracy_train = accuracy_score(Y_pred_train, Y_train)
 accuracy_val = accuracy_score(Y_pred_test, Y_eval)
 
 print("Training accuracy", (accuracy_train)) #1.00
-print("Validation accuracy",(accuracy_val)) #0.813
+print("Validation accuracy",(accuracy_val)) #0.8248
 
