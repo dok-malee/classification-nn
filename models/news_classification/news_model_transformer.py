@@ -29,25 +29,34 @@ wandb.init(project='news-classification-sparse-2')
 
 # Define FFNN_with_Transformer class
 class FFNN_with_Transformer(nn.Module):
-    def __init__(self, hidden_sizes, output_size, tokenizer_model, transformer_model):
+    def __init__(self, hidden_sizes, output_size, tokenizer_model, transformer_model, dropout_rate=0.5):
         super(FFNN_with_Transformer, self).__init__()
         self.transformer_tokenizer = tokenizer_model
         self.transformer_model = transformer_model
         self.fc1 = nn.Linear(384, hidden_sizes[0])
-        self.hidden_layers = nn.ModuleList([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]) for i in range(len(hidden_sizes)-1)])
-        self.output_layer = nn.Linear(hidden_sizes[-1], output_size)
+        self.dropout = nn.Dropout(p=dropout_rate)
+        self.hidden_layers = nn.ModuleList([
+                                               nn.Linear(hidden_sizes[i], hidden_sizes[i + 1]) for i in
+                                               range(len(hidden_sizes) - 1)
+                                           ] + [nn.Linear(hidden_sizes[-1], hidden_sizes[-1] // 2)])
+
+        self.output_layer = nn.Linear(hidden_sizes[-1] // 2, output_size)
         self.leakyrelu = nn.LeakyReLU()
         for param in self.transformer_model.encoder.layer.parameters():
             param.requires_grad = False
 
     def forward(self, input_ids, attention_mask):
-        transformer_output = self.transformer_model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+        transformer_output = self.transformer_model(input_ids=input_ids,
+                                                    attention_mask=attention_mask).last_hidden_state
         x = transformer_output[:, 0, :]
         x = self.leakyrelu(self.fc1(x))
+        x = self.dropout(x)
         for layer in self.hidden_layers:
             x = self.leakyrelu(layer(x))
+            x = self.dropout(x)
         x = self.output_layer(x)
         return x
+
 
 # Function to get batches for transformer
 def get_batches_for_transformer(texts, labels, batch_size, tokenizer, max_length=256, shuffle=True, device='cuda'):
@@ -61,7 +70,8 @@ def get_batches_for_transformer(texts, labels, batch_size, tokenizer, max_length
         batch_indices = indices[start_i: end_i]
         batch_texts = [texts[i] for i in batch_indices]
         batch_labels = torch.tensor([labels[i] for i in batch_indices], dtype=torch.long).to(device)
-        batch_inputs = tokenizer(batch_texts, padding="max_length", max_length=max_length, truncation=True, return_tensors="pt").to(device)
+        batch_inputs = tokenizer(batch_texts, padding="max_length", max_length=max_length, truncation=True,
+                                 return_tensors="pt").to(device)
         batch_input_ids = batch_inputs["input_ids"]
         batch_attention_mask = batch_inputs["attention_mask"]
         yield batch_input_ids, batch_attention_mask, batch_labels
@@ -70,7 +80,9 @@ def get_batches_for_transformer(texts, labels, batch_size, tokenizer, max_length
 # Function to predict with transformer
 def predict_transformer(model, texts, labels, tokenizer, batch_size, shuffle=True, max_length=256):
     model.eval()
-    batches = list(get_batches_for_transformer(texts, labels, batch_size=batch_size, tokenizer=tokenizer, shuffle=shuffle, max_length=max_length))
+    batches = list(
+        get_batches_for_transformer(texts, labels, batch_size=batch_size, tokenizer=tokenizer, shuffle=shuffle,
+                                    max_length=max_length))
     predictions = []
     with torch.no_grad():
         for batch in batches:
@@ -88,6 +100,13 @@ if __name__ == '__main__':
     train_df = pd.DataFrame(train_docs)
     test_df = pd.DataFrame(test_docs)
 
+    # Check the size of the training and test sets
+    train_size = len(train_df)
+    test_size = len(test_df)
+
+    print(f"Training Set Size: {train_size} samples")
+    print(f"Test Set Size: {test_size} samples")
+
     y_train = train_df['category']
     y_test = test_df['category']
 
@@ -103,12 +122,13 @@ if __name__ == '__main__':
     output_size = len(np.unique(y_train))  # Number of unique classes
     batch_size = 32
     learning_rate = 0.001
-    epochs = 25
+    epochs = 5
 
     miniLM_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
     miniLM_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
 
-    ffnn_transformer = FFNN_with_Transformer(hidden_sizes=[512, 512], output_size=output_size, tokenizer_model=miniLM_tokenizer, transformer_model=miniLM_model)
+    ffnn_transformer = FFNN_with_Transformer(hidden_sizes=[512, 512], output_size=output_size,
+                                             tokenizer_model=miniLM_tokenizer, transformer_model=miniLM_model)
     criterion_transformer = nn.CrossEntropyLoss()
     optimizer_transformer = optim.Adam(ffnn_transformer.parameters(), lr=learning_rate)
     scheduler_transformer = torch.optim.lr_scheduler.ExponentialLR(optimizer_transformer, gamma=0.9)
@@ -122,7 +142,9 @@ if __name__ == '__main__':
 
     for epoch in range(epochs):
         total_loss = 0.0
-        train_input = list(get_batches_for_transformer(train_texts, y_train_encoded, batch_size=batch_size, tokenizer=miniLM_tokenizer, max_length=256, device=device))
+        train_input = list(
+            get_batches_for_transformer(train_texts, y_train_encoded, batch_size=batch_size, tokenizer=miniLM_tokenizer,
+                                        max_length=256, device=device))
         batch_num = len(train_input)
         for batch in train_input:
             optimizer_transformer.zero_grad()
@@ -142,12 +164,19 @@ if __name__ == '__main__':
     scheduler_transformer.step()
 
     # Predict with transformer on the test set
-    all_preds_transformer_test = predict_transformer(ffnn_transformer, test_texts, y_test_encoded, miniLM_tokenizer, batch_size=batch_size, max_length=256)
+    all_preds_transformer_test = predict_transformer(ffnn_transformer, test_texts, y_test_encoded, miniLM_tokenizer,
+                                                     batch_size=batch_size, max_length=256)
+
+    # Convert predicted labels to strings using the label encoder
+    all_preds_transformer_test_str = encoder.inverse_transform(all_preds_transformer_test)
+    # Convert back to numeric values
+    all_preds_transformer_test_numeric = encoder.transform(all_preds_transformer_test_str)
 
     # Create classification report
-    classification_rep = classification_report(y_test, all_preds_transformer_test, target_names=y_train.unique(), digits=4, output_dict=True)
+    classification_rep = classification_report(y_test, all_preds_transformer_test_str, target_names=y_train.unique(),
+                                               digits=4, output_dict=True)
     print("Classification Report:")
-    print(classification_report(y_test, all_preds_transformer_test, target_names=y_train.unique(), digits=4))
+    print(classification_report(y_test, all_preds_transformer_test_str, target_names=y_train.unique(), digits=4))
 
     plt.figure(figsize=(21, 18))
     sns.heatmap(pd.DataFrame(classification_rep).iloc[:-1, :].T, annot=True, fmt=".4f", cmap="Blues")
@@ -158,15 +187,15 @@ if __name__ == '__main__':
     # Save the figure as a PNG
     plt.savefig("news_transformer_report.png")
 
-    precision_test = precision_score(y_test, all_preds_transformer_test, average='weighted')
-    recall_test = recall_score(y_test, all_preds_transformer_test, average='weighted')
-    f1_test = f1_score(y_test, all_preds_transformer_test, average='weighted')
+    precision_test = precision_score(y_test_encoded, all_preds_transformer_test, average='weighted')
+    recall_test = recall_score(y_test_encoded, all_preds_transformer_test, average='weighted')
+    f1_test = f1_score(y_test_encoded, all_preds_transformer_test, average='weighted')
 
     # Log evaluation metrics to WandB
     wandb.log({'precision': precision_test, 'recall': recall_test, 'f1': f1_test})
     wandb.finish()
 
-    conf_matrix_dense = sk_confusion_matrix(y_test, all_preds_transformer_test, labels=range(output_size))
+    conf_matrix_dense = sk_confusion_matrix(y_test_encoded, all_preds_transformer_test, labels=range(output_size))
     conf_matrix_percentage_dense = conf_matrix_dense / (conf_matrix_dense.sum(axis=1, keepdims=True) + 1e-10)
 
     # Plot the confusion matrix for dense embeddings
