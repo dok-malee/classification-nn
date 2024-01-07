@@ -17,6 +17,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import seaborn as sns
+import os
 
 
 class FFNN(nn.Module):
@@ -33,14 +34,14 @@ class FFNN(nn.Module):
         self.hidden_layers = nn.ModuleList([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]) for i in range(len(hidden_sizes)-1)])
         # last hidden layer
         self.output_layer = nn.Linear(hidden_sizes[-1], output_size)
-        self.leakyrelu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
 
     def forward(self, inputs): #inputsize????
         # input layer to the first hidden layer
-        x = self.leakyrelu(self.input_layer(inputs))
+        x = self.relu(self.input_layer(inputs))
         # transition between hidden layers, use LeakyReLU as activation function
         for layer in self.hidden_layers:
-            x = self.leakyrelu(layer(x))
+            x = self.relu(layer(x))
         # the last hidden layer to output
         x = self.output_layer(x)
 
@@ -119,11 +120,11 @@ def show_confusion_matrix(y_true, y_pred, label_names, model_name):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
+    output_folder = 'confusion_matrix_plt/'
+    os.makedirs(output_folder, exist_ok=True)
+    plt.savefig(f'{output_folder}{model_name}_confusion_matrix.png')
 
-    # Save the plot to a file (e.g., PNG)
-    plt.savefig(f'{model_name}_confusion_matrix.png')
 
-    # Show the plot (optional)
     plt.show()
 
 
