@@ -50,7 +50,7 @@ def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['
 
     # Extracting features from the training data using a sparse vectorizer
     t0 = time()
-    vectorizer = TfidfVectorizer(sublinear_tf=False, max_df=1.0, min_df=1, stop_words="english")
+    vectorizer = TfidfVectorizer(sublinear_tf=False, max_df=1.0, min_df=1, stop_words="english", ngram_range=(2, 2))
     # per default each row will be already normalized
     X_train = vectorizer.fit_transform(train_docs)
     duration_train = time() - t0

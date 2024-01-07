@@ -130,7 +130,7 @@ hidden_size2 = 512
 output_size = len(target_names)
 batch_size = 64
 learning_rate = 0.001
-epochs = 20
+epochs = 7
 
 wandb.config.update({
     'input_size': input_size,
@@ -207,4 +207,4 @@ plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
 # Adjust layout to prevent overlap
 plt.tight_layout()
-plt.savefig('conf_matrix_sparse_desc_no_do.png')
+plt.savefig('conf_matrix_sparse_bigram_e7.png')

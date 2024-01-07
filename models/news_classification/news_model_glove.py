@@ -102,7 +102,10 @@ def create_glove_embeddings(texts, embeddings_index, vector_size=300):
     for sentence in texts:
         vectors = [embeddings_index.get(word, np.zeros(vector_size)) for word in sentence]
         if vectors:
-            embeddings.append(np.mean(vectors, axis=0))
+            # Pad vectors with zeros to make them uniform in length
+            max_len = max(len(vec) for vec in vectors)
+            padded_vectors = [np.pad(vec, (0, max_len - len(vec))) for vec in vectors]
+            embeddings.append(np.mean(padded_vectors, axis=0))
         else:
             embeddings.append(np.zeros(vector_size))
     return torch.tensor(embeddings, dtype=torch.float32)
@@ -185,7 +188,7 @@ if __name__ == '__main__':
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
     batch_size = 64
     learning_rate = 0.001
-    epochs = 25
+    epochs = 20
 
     # Create datasets and data loaders for embeddings
     train_dataset_dense = DenseDataset(embeddings=dense_embeddings_train, labels=y_train)
