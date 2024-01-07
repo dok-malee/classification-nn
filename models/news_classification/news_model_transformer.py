@@ -17,7 +17,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from models.sentiment_classification.new_sentiment_NNModel import FFNN_with_Transformer
+from models.sentiment_classification.sentiment_NNModel import FFNN_with_Transformer
 
 # nltk.download('punkt')
 

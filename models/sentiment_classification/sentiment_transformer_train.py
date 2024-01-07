@@ -1,6 +1,6 @@
 import models.get_word_vectors
 from models.get_word_vectors import load_datasets, get_tfidf_metrix, sparse_to_Tensor, get_word2vec_embeddings, get_transformer_embeddings
-from new_sentiment_NNModel import FFNN_with_tfidf, FFNN_with_Transformer, FFNN_with_embeddings, train_model, train_model_transformer, predict, predict_transformer
+from sentiment_NNModel import FFNN_with_tfidf, FFNN_with_Transformer, FFNN_with_embeddings, train_model, train_model_transformer, predict, predict_transformer
 import sklearn
 import collections
 import json
@@ -53,7 +53,7 @@ output_size = 2
 # hyper-perameters for model
 hidden_sizes = [128]
 # hyper-perameters for training
-batch_size = 10
+batch_size = 5
 learning_rate = 0.01
 num_epochs = 20
 
@@ -73,6 +73,6 @@ Y_pred_test = predict_transformer(transformer_model, sentiment_eval_texts, Y_eva
 accuracy_train = accuracy_score(Y_pred_train, Y_train)
 accuracy_val = accuracy_score(Y_pred_test, Y_eval)
 
-print("Transformer_Training accuracy", (accuracy_train)) #1.00
-print("Transformer_Validation accuracy",(accuracy_val)) #0.813
+print("Transformer_Training accuracy", (accuracy_train))
+print("Transformer_Validation accuracy",(accuracy_val))
 
