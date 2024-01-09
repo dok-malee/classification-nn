@@ -3,6 +3,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import torch
 import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_dataset(path):
     "load the text and label from dataset"
