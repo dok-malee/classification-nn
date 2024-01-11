@@ -61,9 +61,9 @@ output_size = 2
 # hyper-perameters for model
 hidden_sizes = [128, 64]
 # hyper-perameters for training
-batch_size = 256
+batch_size = 32
 learning_rate = 0.05
-num_epochs = 10
+num_epochs = 20
 
 tfidf_model = FFNN(input_size=input_size, output_size=output_size, hidden_sizes=hidden_sizes)
 
@@ -72,7 +72,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(tfidf_model.parameters(), lr=learning_rate)
 
 wandb.init(project="sentiment_classification_with_tfidf_vectors")
-train_model(train_tfidf_tensor, Y_train, tfidf_model, optimizer, criterion, batch_size, num_epochs, print_epoch=1)
+train_model(train_tfidf_tensor, Y_train, tfidf_model, optimizer, criterion, batch_size, num_epochs, print_epoch=2)
 wandb.finish()
 best_model_with_tfidf = tfidf_model
 
@@ -80,18 +80,11 @@ best_model_with_tfidf = tfidf_model
 Y_pred_train = predict(best_model_with_tfidf, train_tfidf_tensor)
 Y_pred_eval = predict(best_model_with_tfidf, eval_tfidf_tensor)
 
-# accuracy_train = accuracy_score(Y_pred_train, Y_train)
-# accuracy_eval = accuracy_score(Y_pred_test, Y_eval)
-# f1_eval = f1_score(Y_pred_test, Y_eval)
-#
-# print("Tfidf_Training accuracy", (accuracy_train)) #1.00
-# print("Tfidf_Test accuracy",(accuracy_eval)) #0.8248
-# print("Tfidf_Test f1", f1_eval)
 
 train_report = get_classification_report(Y_train, Y_pred_train, label_class_names)
 eval_report = get_classification_report(Y_eval, Y_pred_eval, label_class_names)
 print(train_report)
 print(eval_report)
 
-show_confusion_matrix(Y_train, Y_pred_train, label_class_names, "Tfidf_Train")
-show_confusion_matrix(Y_eval, Y_pred_eval, label_class_names, "Tfidf_Test")
+show_confusion_matrix(Y_train, Y_pred_train, label_class_names, "Tfidf_Unigram_Train")
+show_confusion_matrix(Y_eval, Y_pred_eval, label_class_names, "Tfidf_Unigram_Test")

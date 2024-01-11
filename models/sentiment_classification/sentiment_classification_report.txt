@@ -1,42 +1,85 @@
-Sentiment Classfication FFNN Model with Tfidf Vectors:
+Sentiment Classfication FFNN Model with Tfidf Unigram Vectors:
 
+Hyperparameters:
+hidden_sizes = [128, 64]
+batch_size = 32
+learning_rate = 0.05
+num_epochs = 20 * 5 = 100
 
-              precision    recall  f1-score   support
 Train:
-    negative       0.83      0.96      0.89     20015
-    positive       0.95      0.80      0.87     19985
+              precision    recall  f1-score   support
 
-    accuracy                           0.88     40000
-   macro avg       0.89      0.88      0.88     40000
-weighted avg       0.89      0.88      0.88     40000
+    negative       1.00      1.00      1.00     20015
+    positive       1.00      1.00      1.00     19985
+
+    accuracy                           1.00     40000
+   macro avg       1.00      1.00      1.00     40000
+weighted avg       1.00      1.00      1.00     40000
 
 Eval:
               precision    recall  f1-score   support
 
-    negative       0.80      0.94      0.87      4985
-    positive       0.93      0.77      0.84      5015
+    negative       0.88      0.87      0.87      4985
+    positive       0.87      0.88      0.88      5015
 
-    accuracy                           0.85     10000
-   macro avg       0.87      0.85      0.85     10000
-weighted avg       0.87      0.85      0.85     10000
+    accuracy                           0.87     10000
+   macro avg       0.87      0.87      0.87     10000
+weighted avg       0.87      0.87      0.87     10000
+
+
+
+Sentiment Classfication FFNN Model with Tfidf Bigram Vectors:
+
+Hyperparameters:
+hidden_sizes = [128, 64]
+batch_size = 32
+learning_rate = 0.05
+num_epochs = 20 * 5 = 100
+
+Train:
+              precision    recall  f1-score   support
+
+    negative       1.00      1.00      1.00     20015
+    positive       1.00      1.00      1.00     19985
+
+    accuracy                           1.00     40000
+   macro avg       1.00      1.00      1.00     40000
+weighted avg       1.00      1.00      1.00     40000
+
+Eval:
+              precision    recall  f1-score   support
+
+    negative       0.88      0.87      0.87      4985
+    positive       0.87      0.88      0.88      5015
+
+    accuracy                           0.87     10000
+   macro avg       0.88      0.87      0.87     10000
+weighted avg       0.87      0.87      0.87     10000
+
 
 
 Sentiment Classfication FFNN Model with Word2Vec Embeddings:
+
+Hyperparameters:
+hidden_sizes = [128, 64]
+batch_size = 32
+learning_rate = 0.05
+num_epochs = 500 * 5 = 2500
+
 Train:
               precision    recall  f1-score   support
 
-    negative       0.70      0.73      0.72     20015
-    positive       0.72      0.69      0.70     19985
+    negative       0.67      0.72      0.69     20015
+    positive       0.69      0.65      0.67     19985
 
-    accuracy                           0.71     40000
-   macro avg       0.71      0.71      0.71     40000
-weighted avg       0.71      0.71      0.71     40000
-
+    accuracy                           0.68     40000
+   macro avg       0.68      0.68      0.68     40000
+weighted avg       0.68      0.68      0.68     40000
 Eval:
               precision    recall  f1-score   support
 
-    negative       0.59      0.62      0.60      4985
-    positive       0.60      0.57      0.58      5015
+    negative       0.58      0.64      0.61      4985
+    positive       0.60      0.55      0.57      5015
 
     accuracy                           0.59     10000
    macro avg       0.59      0.59      0.59     10000
@@ -45,7 +88,15 @@ weighted avg       0.59      0.59      0.59     10000
 
 
 Sentiment Classfication FFNN Model with GloVe Embeddings:
+
+Hyperparameters:
+hidden_sizes = [128, 64]
+batch_size = 32
+learning_rate = 0.05
+num_epochs = 500 * 5 = 2500
+
 Train:
+
               precision    recall  f1-score   support
 
     negative       0.94      0.94      0.94     20015
@@ -58,8 +109,8 @@ weighted avg       0.94      0.94      0.94     40000
 Eval:
               precision    recall  f1-score   support
 
-    negative       0.78      0.79      0.78      4985
-    positive       0.79      0.78      0.78      5015
+    negative       0.78      0.77      0.78      4985
+    positive       0.78      0.78      0.78      5015
 
     accuracy                           0.78     10000
    macro avg       0.78      0.78      0.78     10000

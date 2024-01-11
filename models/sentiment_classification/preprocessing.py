@@ -28,35 +28,35 @@ def load_datasets(train_file, test_file):
 
     return train_data, test_data
 
-def get_vocab(train_texts, unk_threshold=0) -> Dict[str, int]:
-    '''
-    If directly use the embedding layer in the FFNN to get the embeddings, get_vocab function is called.
-    Makes a dictionary of words given a list of tokenized sentences.
-    :param train_texts: List of strings
-    :param unk_threshold: All words below this count threshold are excluded from dictionary and replaced with UNK
-    :return: A dictionary of string keys and index values
-    '''
-    tokenized_train_texts = [word_tokenize(sent) for sent in train_texts]
-    # First count the frequency of each distinct ngram
-    word_frequencies = {}
-    for sent in tokenized_train_texts:
-        for word in sent:
-            if word not in word_frequencies:
-                word_frequencies[word] = 0
-            word_frequencies[word] += 1
-
-    # Assign indices to each distinct ngram
-    word_to_ix = {'<PAD>': 0, '<UNK>': 1}
-    for word, freq in word_frequencies.items():
-        if freq > unk_threshold:  # only add words that are above threshold
-            word_to_ix[word] = len(word_to_ix)
-    # Print some info on dictionary size
-    print(f"At unk_threshold={unk_threshold}, the dictionary contains {len(word_to_ix)} words")
-    return word_to_ix
+# def get_vocab(train_texts, unk_threshold=0) -> Dict[str, int]:
+#     '''
+#     If directly use the embedding layer in the FFNN to get the embeddings, get_vocab function is called.
+#     Makes a dictionary of words given a list of tokenized sentences.
+#     :param train_texts: List of strings
+#     :param unk_threshold: All words below this count threshold are excluded from dictionary and replaced with UNK
+#     :return: A dictionary of string keys and index values
+#     '''
+#     tokenized_train_texts = [word_tokenize(sent) for sent in train_texts]
+#     # First count the frequency of each distinct ngram
+#     word_frequencies = {}
+#     for sent in tokenized_train_texts:
+#         for word in sent:
+#             if word not in word_frequencies:
+#                 word_frequencies[word] = 0
+#             word_frequencies[word] += 1
+#
+#     # Assign indices to each distinct ngram
+#     word_to_ix = {'<PAD>': 0, '<UNK>': 1}
+#     for word, freq in word_frequencies.items():
+#         if freq > unk_threshold:  # only add words that are above threshold
+#             word_to_ix[word] = len(word_to_ix)
+#     # Print some info on dictionary size
+#     print(f"At unk_threshold={unk_threshold}, the dictionary contains {len(word_to_ix)} words")
+#     return word_to_ix
 
 
 """preprocessing for tfidf"""
-def get_tfidf_matrix(train_texts, eval_texts, hyper_param={'max_features': None, 'max_df': 1, 'min_df': 1}):
+def get_tfidf_matrix(train_texts, eval_texts, ngram=(1,1), hyper_param={'max_features': None, 'max_df': 1, 'min_df': 1}):
     """
     Get tf-idf sparse metrics of train_texts and test_texts using TfidfVectorizer
 
@@ -69,7 +69,7 @@ def get_tfidf_matrix(train_texts, eval_texts, hyper_param={'max_features': None,
 
     vectorizer = TfidfVectorizer(stop_words='english',
         max_features=hyper_param.get('max_features', None),
-        max_df=hyper_param.get('max_df',1),
+        max_df=hyper_param.get('max_df', 1),
         min_df=hyper_param.get('min_df', 1))
 
 
