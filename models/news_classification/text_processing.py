@@ -6,7 +6,7 @@ from time import time
 
 from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer, BertModel, AutoTokenizer, AutoModel
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, KeyedVectors
 from nltk.tokenize import word_tokenize
 import numpy as np
 
@@ -41,8 +41,8 @@ def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['
     y_test = test_df['category']
 
     # Use only one source for each article
-    #train_docs = train_df[text_columns[0]]
-    #test_docs = test_df[text_columns[0]]
+    # train_docs = train_df[text_columns[0]]
+    # test_docs = test_df[text_columns[0]]
 
     # Merge text from specified columns
     train_docs = train_df[text_columns[0]] + ' ' + train_df[text_columns[1]]
@@ -124,7 +124,12 @@ def create_dense_embeddings(train_data, test_data, text_column='headline', model
     return dense_embeddings_train, dense_embeddings_test, y_train, y_test
 
 
-def create_word2vec_embeddings(train_data, test_data, text_column=['headline', 'short_description'], vector_size=300, window=10, min_count=1,
+def load_pretrained_word2vec_model(path):
+    return KeyedVectors.load_word2vec_format(path, binary=True)
+
+
+def create_word2vec_embeddings(train_data, test_data, text_column=['headline', 'short_description'], vector_size=300,
+                               window=10, min_count=1,
                                workers=4, validation_size=0.1):
     """
     Create Word2Vec embeddings for news classification.
@@ -158,14 +163,15 @@ def create_word2vec_embeddings(train_data, test_data, text_column=['headline', '
     y_test = test_df['category']
 
     # Extract text: Use this if you only have one source
-    #train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
-    #test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
+    # train_texts = [word_tokenize(row[text_column]) for _, row in train_df.iterrows()]
+    # test_texts = [word_tokenize(row[text_column]) for _, row in test_df.iterrows()]
 
     # multiple sources merged
     train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
     test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
 
-    train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size, random_state=42)
+    train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size,
+                                                              random_state=42)
 
     # Train Word2Vec model
     word2vec_model = Word2Vec(sentences=train_texts, vector_size=vector_size, window=window, min_count=min_count,
@@ -206,6 +212,48 @@ def create_word2vec_embeddings(train_data, test_data, text_column=['headline', '
     dense_embeddings_test = torch.tensor(dense_embeddings_test)
 
     return dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, y_train.unique()
+
+
+word2vec_model_path = 'word2vec_embeddings/GoogleNews-vectors-negative300.bin'
+pretrained_word2vec_model = KeyedVectors.load_word2vec_format(word2vec_model_path, binary=True)
+
+
+def create_word2vec_embeddings2(train_data, test_data, text_column=['headline', 'short_description'], vector_size=300,
+                                validation_size=0.1):
+    train_df = pd.DataFrame(train_data)
+    test_df = pd.DataFrame(test_data)
+
+    y_train = train_df['category']
+    y_test = test_df['category']
+
+    train_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in train_df.iterrows()]
+    test_texts = [word_tokenize(row[text_column[0]] + ' ' + row[text_column[1]]) for _, row in test_df.iterrows()]
+
+    train_texts, val_texts, y_train, y_val = train_test_split(train_texts, y_train, test_size=validation_size,
+                                                              random_state=42)
+
+    # Get embeddings for training data
+    dense_embeddings_train = get_embeddings(train_texts, pretrained_word2vec_model, vector_size)
+
+    # Get embeddings for validation data
+    dense_embeddings_val = get_embeddings(val_texts, pretrained_word2vec_model, vector_size)
+
+    # Get embeddings for test data
+    dense_embeddings_test = get_embeddings(test_texts, pretrained_word2vec_model, vector_size)
+
+    return dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, y_train.unique()
+
+
+def get_embeddings(texts, word2vec_model, vector_size):
+    dense_embeddings = []
+    for sentence in texts:
+        embeddings = [word2vec_model[word] for word in sentence if word in word2vec_model]
+        if embeddings:
+            dense_embeddings.append(np.mean(embeddings, axis=0))
+        else:
+            dense_embeddings.append(np.zeros(vector_size))
+    return torch.tensor(dense_embeddings)
+
 
 def get_transformer_embeddings(texts):
     """

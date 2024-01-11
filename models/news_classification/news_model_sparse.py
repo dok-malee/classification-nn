@@ -19,6 +19,8 @@ test_file = '../../data/classification_data/data/news/classification/classificat
 
 wandb.init(project='news-classification-sparse-2')
 
+word2vec_model_path = 'path/to/GoogleNews-vectors-negative300.bin'
+
 
 # Custom dataset class
 class SparseDataset(Dataset):

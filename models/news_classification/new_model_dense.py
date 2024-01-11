@@ -2,7 +2,8 @@
 import wandb
 from tqdm import tqdm
 import pandas as pd
-from models.news_classification.text_processing import load_datasets, create_word2vec_embeddings
+from models.news_classification.text_processing import load_datasets, create_word2vec_embeddings, \
+    create_word2vec_embeddings2
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix as sk_confusion_matrix, precision_score, recall_score, f1_score, \
     classification_report
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     train_docs, test_docs = load_datasets(train_file, test_file)
 
     # Create dense embeddings using word2vec
-    dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, target_names = create_word2vec_embeddings(train_data=train_docs,
+    dense_embeddings_train, dense_embeddings_val, dense_embeddings_test, y_train, y_val, y_test, target_names = create_word2vec_embeddings2(train_data=train_docs,
                                                                                                                                            test_data=test_docs,
                                                                                                                                            vector_size=300)
     # Cast dense embeddings to torch.float32 to match the model's default data type
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
     batch_size = 64
     learning_rate = 0.001
-    epochs = 25
+    epochs = 15
 
     # Create datasets and data loaders for embeddings
     train_dataset_dense = DenseDataset(embeddings=dense_embeddings_train, labels=y_train)
