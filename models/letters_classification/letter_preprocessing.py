@@ -2,6 +2,8 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 import torch
 import numpy as np
+from gensim.models import Word2Vec
+from nltk.tokenize import word_tokenize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,7 +20,6 @@ def load_dataset(path):
         labels_lang = [letter["lang"] for letter in list_of_letters]        # for language identification
 
     return instances, labels_author, labels_lang
-
 
 def create_sparse_vectors(train_instances, test_instances, max_docfreq, min_docfreq):
     # https://scikit-learn.org/stable/auto_examples/text/plot_document_classification_20newsgroups.html#sphx-glr-auto-examples-text-plot-document-classification-20newsgroups-py
@@ -39,6 +40,35 @@ def sparse_to_Tensor(sparse_features):
         torch.Size(sparse_features.shape),
     )
     return sparse_tensor
+
+word2vec_size = 256
+def get_word2vec_embeddings(train_texts, window=5, min_count=1, workers=4, vocab_size=10000):
+    train_texts_sents = [word_tokenize(sent) for sent in train_texts]
+    #print(train_texts_sents)
+    '''if we use the word2vec matrix trained with training data on the test data:'''
+    word2vec_model = Word2Vec(sentences=train_texts_sents, vector_size=word2vec_size, window=window, min_count=min_count,
+             workers=workers, max_vocab_size=vocab_size)
+
+    # Get embeddings for the vocabulary
+    word2vec_word2idx = word2vec_model.wv.key_to_index # dictionary: word to index
+    return word2vec_model, word2vec_word2idx
+
+def get_word2vec_sent_embeddings(texts, word2vec_model, word2vec_word2idx):
+    sent_embeddings = []
+    for sentence in texts:
+        word_vectors = [word2vec_model.wv[word] for word in sentence if word in word2vec_word2idx]
+        if word_vectors:
+            sent_embedding = np.mean(word_vectors, axis=0)
+            sent_embeddings.append(sent_embedding)
+        else:
+            # If all words in the sentence are out-of-vocabulary, use a zero vector
+            sent_embeddings.append(np.zeros(word2vec_size))
+
+    dense_embeddings = torch.tensor(np.array(sent_embeddings)).to(torch.float32)
+    return dense_embeddings
+
+
+
 
 
 if __name__ == '__main__':
@@ -61,4 +91,5 @@ if __name__ == '__main__':
     y_train_lang= train_lang_labels
     y_test_lang = test_lang_labels
 
-    
+    word2vec_model, word2vec_word2idx = get_word2vec_embeddings(train_inst)
+    #print(get_word2vec_sent_embeddings(train_inst, word2vec_model, word2vec_word2idx))
