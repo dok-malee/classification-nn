@@ -15,8 +15,50 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #print(device)
 
+# Download GloVe embeddings from https://nlp.stanford.edu/projects/glove/
+glove_file_path = "/Users/sarahannauffelmann/desktop/glove6B/glove.6B.300d.txt"
+
+def load_glove_embeddings(file_path):
+    """
+    Returns:
+    - embeddings_index (dict): A dictionary mapping words to their corresponding embedding vectors.
+    """
+    embeddings_index = {}
+    with open(file_path, encoding='utf-8') as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            coefs = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = coefs
+    return embeddings_index
+
+def create_glove_embeddings(texts, embeddings_index, vector_size=300):
+    """
+    Create GloVe embeddings for a list of texts using a pre-loaded embeddings dictionary.
+
+    Parameters:
+    - texts (list): A list of lists, where each inner list represents a tokenized sentence.
+    - embeddings_index (dict): A dictionary mapping words to their corresponding embedding vectors.
+    - vector_size (int): The dimensionality of the embedding vectors.
+
+    Returns:
+    - embeddings (torch.Tensor): A tensor containing the GloVe embeddings for each input text.
+    """
+    embeddings = []
+    for sentence in texts:
+        vectors = [embeddings_index.get(word, np.zeros(vector_size)) for word in sentence]
+        if vectors:
+            # Pad vectors with zeros to make them uniform in length
+            max_len = max(len(vec) for vec in vectors)
+            padded_vectors = [np.pad(vec, (0, max_len - len(vec))) for vec in vectors]
+            embeddings.append(np.mean(padded_vectors, axis=0))
+        else:
+            embeddings.append(np.zeros(vector_size))
+    return torch.tensor(embeddings, dtype=torch.float32)
+
 
 if __name__ == "__main__":
+    
     # paths to files
     path_to_train_file = "/Users/sarahannauffelmann/desktop/01_WiSe23:24/Seminar Klassifizierung/Projekt FFNN/letters/classifier_data_train.jsonl"
     path_to_test_file = "/Users/sarahannauffelmann/desktop/01_WiSe23:24/Seminar Klassifizierung/Projekt FFNN/letters/classifier_data_eval.jsonl"
@@ -25,11 +67,10 @@ if __name__ == "__main__":
     train_inst, train_author_labels, train_lang_labels = load_dataset(path_to_train_file)
     test_inst, test_author_labels, test_lang_labels = load_dataset(path_to_test_file)
 
-    # create embeddings
-    word2vec_size = 256
-    word2vec_model, word2vec_word2id = get_word2vec_embeddings(train_inst)
-    X_train = get_word2vec_sent_embeddings(train_inst, word2vec_model, word2vec_word2id)
-    X_test = get_word2vec_sent_embeddings(test_inst, word2vec_model, word2vec_word2id)  
+    # get glove embeddings
+    emb = load_glove_embeddings(glove_file_path)
+    X_train = create_glove_embeddings(train_inst, emb)
+    X_test = create_glove_embeddings(test_inst, emb)
 
     # labels to vector encoding
     y_train, y_test, target_names = get_label_vectors(train_author_labels, test_author_labels)
@@ -42,16 +83,16 @@ if __name__ == "__main__":
         #print(X_batch, y_batch)
 
     # model parameters
-    input_size = word2vec_size
+    input_size = 300  # Dimensionality of dense embeddings glove.6B.300d
     output_size = 7         #  7 different authors
     hidden1 = 512
     hidden2 = 512
 
     model = FFNN(input_size, hidden1, hidden2, output_size).to(device)
-    model_name = "FFNN_sparse"
+    model_name = "FFNN_glove"
 
     # training parameters
-    num_epochs = 30
+    num_epochs = 25
     learning_rate = 0.001
     loss_func = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)

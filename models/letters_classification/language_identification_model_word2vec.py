@@ -44,7 +44,7 @@ model = FFNN(input_size, hidden1, hidden2, output_size)
 model_name = "FFNN_sparse_lang"
 
 # training parameters
-num_epochs = 2
+num_epochs = 10
 learning_rate = 0.001
 loss_func = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
@@ -54,7 +54,7 @@ for epoch in range(num_epochs):
      train_loss = train_model(dataloader_train, model, optimizer, loss_func)
      print(f'Epoch {epoch+1}, Training Loss: {train_loss:.4f}')
 
-accuracy, gold_labels, predictions = evaluate_model(model, dataloader_test)
+accuracy, gold_labels, predictions = evaluate_model(model, dataloader_train)
 
 #print(set(gold_labels), set(predictions))
 test_target_names = [lang for i, lang in enumerate(target_names) if i in set(gold_labels)]

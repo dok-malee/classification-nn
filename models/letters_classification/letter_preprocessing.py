@@ -4,6 +4,9 @@ import torch
 import numpy as np
 from gensim.models import Word2Vec
 from nltk.tokenize import word_tokenize
+import torch.nn
+from torchtext.vocab import GloVe
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -21,6 +24,7 @@ def load_dataset(path):
 
     return instances, labels_author, labels_lang
 
+# for sparse model
 def create_sparse_vectors(train_instances, test_instances, max_docfreq, min_docfreq):
     # https://scikit-learn.org/stable/auto_examples/text/plot_document_classification_20newsgroups.html#sphx-glr-auto-examples-text-plot-document-classification-20newsgroups-py
     "create tf-idf vector representations, instances: list of str"
@@ -41,6 +45,7 @@ def sparse_to_Tensor(sparse_features):
     )
     return sparse_tensor
 
+# for word2vec embeddings
 word2vec_size = 256
 def get_word2vec_embeddings(train_texts, window=5, min_count=1, workers=4, vocab_size=10000):
     train_texts_sents = [word_tokenize(sent) for sent in train_texts]
@@ -67,8 +72,27 @@ def get_word2vec_sent_embeddings(texts, word2vec_model, word2vec_word2idx):
     dense_embeddings = torch.tensor(np.array(sent_embeddings)).to(torch.float32)
     return dense_embeddings
 
+# for pre-trained embeddings
+#glove_model = GloVe(name='6B', dim=100)
 
+glove_vectors= GloVe()
+# set freeze to false if you want them to be trainable
+my_embeddings = torch.nn.Embedding.from_pretrained(glove_vectors.vectors,freeze=True) 
 
+#def get_glove_sentence_embedding(texts, glove=glove_model):
+    #sent_embeddings = []
+    #for sent in texts:
+        #sent_tokens = word_tokenize(sent)
+        #sent_vectors = glove.get_vecs_by_tokens(sent_tokens)
+        # if sent_vectors:
+            # Calculate the sentence embedding by averaging the word vectors
+        #sent_embedding = torch.mean(sent_vectors, dim=0)
+        #sent_embeddings.append(sent_embedding)
+        # else:
+        #     # If all words in the sentence are out-of-vocabulary, use a zero vector
+        #     sent_embeddings.append(np.zeros(glove.dim))
+    #glove_embeddings = torch.tensor(np.array(sent_embeddings)).to(torch.float32)
+    #return glove_embeddings
 
 
 if __name__ == '__main__':
@@ -93,3 +117,7 @@ if __name__ == '__main__':
 
     word2vec_model, word2vec_word2idx = get_word2vec_embeddings(train_inst)
     #print(get_word2vec_sent_embeddings(train_inst, word2vec_model, word2vec_word2idx))
+    #train_glove_tensor = get_glove_sentence_embedding(train_inst, glove=glove_model)
+
+    #glove_model = GloVe(name='6B', dim=100)
+    print(my_embeddings)
