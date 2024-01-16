@@ -1,5 +1,5 @@
 from letter_preprocessing import load_dataset, create_sparse_vectors, sparse_to_Tensor
-from author_classification_model import FFNN, train_model, show_confusion_matrix, evaluate_model
+from author_classification_model_sparse import FFNN, train_model, show_confusion_matrix, evaluate_model
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
 from torch.utils.data import DataLoader
@@ -44,7 +44,7 @@ model = FFNN(input_size, hidden1, hidden2, output_size)
 model_name = "FFNN_sparse_lang"
 
 # training parameters
-num_epochs = 1
+num_epochs = 2
 learning_rate = 0.001
 loss_func = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
