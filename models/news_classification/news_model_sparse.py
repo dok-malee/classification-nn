@@ -132,7 +132,7 @@ hidden_size2 = 512
 output_size = len(target_names)
 batch_size = 64
 learning_rate = 0.001
-epochs = 7
+epochs = 5
 
 wandb.config.update({
     'input_size': input_size,
@@ -185,7 +185,7 @@ plt.xlabel("Metrics")
 plt.ylabel("Categories")
 
 # Save the figure as a PNG
-plt.savefig("news_sparse_report.png")
+plt.savefig("news_report_tfidf_e20.png")
 
 
 precision = precision_score(all_labels, all_preds, average='weighted')
@@ -209,4 +209,4 @@ plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
 # Adjust layout to prevent overlap
 plt.tight_layout()
-plt.savefig('conf_matrix_sparse_bigram_e7.png')
+plt.savefig('conf_matrix_tfidf_e20.png')

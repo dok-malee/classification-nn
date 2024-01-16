@@ -22,11 +22,35 @@ def load_datasets(train_file, test_file):
     with open(train_file, 'r', encoding='utf-8') as file:
         train_data = [json.loads(line) for line in file]
 
+    y_train = [item['category'] for item in train_data]
+
     # Load test data
     with open(test_file, 'r', encoding='utf-8') as file:
         test_data = [json.loads(line) for line in file]
 
-    return train_data, test_data
+    y_test = [item['category'] for item in test_data]
+
+    return train_data, test_data, y_train, y_test
+
+def load_datasets_bert(train_file, test_file):
+    """Load the news articles dataset."""
+
+    # Load training data
+    with open(train_file, 'r', encoding='utf-8') as file:
+        train_data = [json.loads(line) for line in file]
+
+    y_train = [item['category'] for item in train_data]
+
+    # Load test data
+    with open(test_file, 'r', encoding='utf-8') as file:
+        test_data = [json.loads(line) for line in file]
+
+    y_test = [item['category'] for item in test_data]
+
+    train_docs = [item['headline'] + ' ' + item['short_description'] for item in train_data]
+    test_docs = [item['headline'] + ' ' + item['short_description'] for item in test_data]
+
+    return train_docs, test_docs, y_train, y_test
 
 
 def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['headline', 'short_description']):
@@ -75,7 +99,7 @@ def create_sparse_matrices(train_data, test_data, verbose=False, text_columns=['
         print(f"Vectorize testing done in {duration_test:.3f}s at {data_test_size_mb / duration_test:.3f}MB/s")
         print(f"n_samples: {X_test.shape[0]}, n_features: {X_test.shape[1]}")
 
-    return X_train, X_test, y_train, y_test, feature_names, y_train.unique()
+    return X_train, X_test, y_train, y_test, feature_names, np.unique(y_train)
 
 
 def create_dense_embeddings(train_data, test_data, text_column='headline', model_name='bert-base-uncased',

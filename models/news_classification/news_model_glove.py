@@ -188,7 +188,7 @@ if __name__ == '__main__':
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
     batch_size = 64
     learning_rate = 0.001
-    epochs = 20
+    epochs = 25
 
     # Create datasets and data loaders for embeddings
     train_dataset_dense = DenseDataset(embeddings=dense_embeddings_train, labels=y_train)
@@ -231,10 +231,15 @@ if __name__ == '__main__':
     # Evaluate the model on test set after training is complete
     all_preds_dense_test, all_labels_dense_test = evaluate_model(model_dense, test_loader_dense, device)
 
+    all_preds_dense_test_categories = train_dataset_dense.label_encoder.inverse_transform(all_preds_dense_test)
+    all_labels_dense_test_categories = train_dataset_dense.label_encoder.inverse_transform(all_labels_dense_test)
+
+
     # Create classification report
-    classification_rep = classification_report(all_labels_dense_test, all_preds_dense_test, digits=4, output_dict=True)
+    classification_rep = classification_report(all_labels_dense_test_categories, all_preds_dense_test_categories,
+                                               target_names=np.unique(y_train), digits=4, output_dict=True)
     print("Classification Report:")
-    print(classification_report(all_labels_dense_test, all_preds_dense_test, digits=4))
+    print(classification_report(all_labels_dense_test_categories, all_preds_dense_test_categories, digits=4))
 
     plt.figure(figsize=(21, 18))
     sns.heatmap(pd.DataFrame(classification_rep).iloc[:-1, :].T, annot=True, fmt=".4f", cmap="Blues")
@@ -243,7 +248,7 @@ if __name__ == '__main__':
     plt.ylabel("Categories")
 
     # Save the figure as a PNG
-    plt.savefig("news_glove_report.png")
+    plt.savefig("news_glove_report_e25_2.png")
 
     precision_test = precision_score(all_labels_dense_test, all_preds_dense_test, average='weighted')
     recall_test = recall_score(all_labels_dense_test, all_preds_dense_test, average='weighted')
@@ -263,6 +268,6 @@ if __name__ == '__main__':
     plt.ylabel('True Labels')
     plt.title('Confusion Matrix for GloVe Embeddings')
     plt.tight_layout()
-    plt.savefig('conf_matrix_glove.png')
+    plt.savefig('conf_matrix_glove_e20_2.png')
 
     wandb.finish()

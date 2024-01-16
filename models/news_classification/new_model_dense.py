@@ -127,6 +127,8 @@ if __name__ == '__main__':
     dense_embeddings_test = dense_embeddings_test.to(torch.float32)
     dense_embeddings_val = dense_embeddings_val.to(torch.float32)
 
+    target_names = np.unique(y_train)
+
     # Print shape of dense embeddings
     print(f"Train Dense Embeddings Shape: {dense_embeddings_train.shape}")
     print(f"Test Dense Embeddings Shape: {dense_embeddings_test.shape}")
@@ -137,7 +139,7 @@ if __name__ == '__main__':
     output_size = len(np.unique(y_train))  # Use np.unique to get the number of unique classes
     batch_size = 64
     learning_rate = 0.001
-    epochs = 15
+    epochs = 20
 
     # Create datasets and data loaders for embeddings
     train_dataset_dense = DenseDataset(embeddings=dense_embeddings_train, labels=y_train)
@@ -193,7 +195,7 @@ if __name__ == '__main__':
     plt.ylabel("Categories")
 
     # Save the figure as a PNG
-    plt.savefig("news_word2vec_report.png")
+    plt.savefig("news_report_googleNews_e5.png")
 
 
     precision_test = precision_score(all_labels_dense_test, all_preds_dense_test, average='weighted')
@@ -209,11 +211,11 @@ if __name__ == '__main__':
 
     # Plot the confusion matrix for dense embeddings
     plt.figure(figsize=(21, 18))
-    sns.heatmap(conf_matrix_percentage_dense, annot=True, fmt=".2%", cmap="Blues", xticklabels=y_train.unique(),
-                yticklabels=y_train.unique())
+    sns.heatmap(conf_matrix_percentage_dense, annot=True, fmt=".2%", cmap="Blues", xticklabels=target_names,
+                yticklabels=target_names)
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
     plt.title('Confusion Matrix for Dense Embeddings')
     # Adjust layout to prevent overlap
     plt.tight_layout()
-    plt.savefig('conf_matrix_word2vec_v300_window10.png')
+    plt.savefig('conf_matrix_googleNews_e5.png')
