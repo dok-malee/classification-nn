@@ -1,4 +1,4 @@
-from letter_preprocessing import load_dataset, get_word2vec_embeddings, get_word2vec_sent_embeddings
+from letter_preprocessing import load_dataset, create_sparse_vectors_bigrams, sparse_to_Tensor
 from author_classification_model_sparse import FFNN, train_model, show_confusion_matrix, evaluate_model
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
@@ -15,18 +15,18 @@ path_to_test_file = "/Users/sarahannauffelmann/desktop/01_WiSe23:24/Seminar Klas
 train_inst, train_author_labels, train_lang_labels = load_dataset(path_to_train_file)
 test_inst, test_author_labels, test_lang_labels = load_dataset(path_to_test_file)
 
-# create embeddings
-word2vec_size = 256
-word2vec_model, word2vec_word2id = get_word2vec_embeddings(train_inst)
-X_train = get_word2vec_sent_embeddings(train_inst, word2vec_model, word2vec_word2id)
-X_test = get_word2vec_sent_embeddings(test_inst, word2vec_model, word2vec_word2id)
+# sparse vectors to tensors
+x_train_sparse, x_test_sparse = create_sparse_vectors_bigrams(train_inst, test_inst, 0.5, 5)
+
+X_train = sparse_to_Tensor(x_train_sparse)
+X_test = sparse_to_Tensor(x_test_sparse)
 
 # labels to vector encoding
 label_enc = LabelEncoder()
 labels_encoded_train = label_enc.fit_transform(train_lang_labels)
 labels_encoded_test = label_enc.transform(test_lang_labels)
 target_names = label_enc.classes_   # ['da' 'de' 'en' 'fr' 'hu' 'it' 'sv']
-#print(target_names)
+print(target_names)
 
 y_train = torch.tensor(labels_encoded_train)
 y_test = torch.tensor(labels_encoded_test)
@@ -35,7 +35,7 @@ y_test = torch.tensor(labels_encoded_test)
 dataloader_train = DataLoader(list(zip(X_train, y_train)), shuffle=True, batch_size=64)
 dataloader_test = DataLoader(list(zip(X_test, y_test)), shuffle=True, batch_size=64)
 
-input_size = word2vec_size
+input_size = X_train.shape[1]
 output_size = 7         #  7 different languages
 hidden1 = 512
 hidden2 = 512
@@ -44,7 +44,7 @@ model = FFNN(input_size, hidden1, hidden2, output_size)
 model_name = "FFNN_sparse_lang"
 
 # training parameters
-num_epochs = 10
+num_epochs = 2
 learning_rate = 0.001
 loss_func = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)

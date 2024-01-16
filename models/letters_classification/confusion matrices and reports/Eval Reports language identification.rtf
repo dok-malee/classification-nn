@@ -8,7 +8,7 @@
 \f0\b\fs24 \cf0 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\fs28 \cf0 Evaluation report language identification with sparse tfidf-vectors - TRAIN:\
+\fs28 \cf0 Evaluation report language identification with sparse tfidf-vectors (unigrams) - TRAIN:\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f1\b0\fs24 \cf0 \
@@ -33,10 +33,11 @@ ___________________________________________________________________________\
 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\fs28 \cf0 Evaluation report language identification with sparse tfidf-vectors - TEST:\
+\fs28 \cf0 Evaluation report language identification with sparse tfidf-vectors (unigrams) - TEST:\
 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f1\b0\fs24       
+\f1\b0\fs24 \cf0       
 \f0\b       		precision   		recall  	f1-score   	support\
 \
 da       		1.00      		1.00      	1.00       	844\
@@ -50,15 +51,63 @@ macro avg       	0.99      		0.94      	0.96      	4881\
 weighted avg       	1.00      		1.00      	1.00      	4881
 \f1\b0 \
 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f0\b ___________________________________________________________________________\
+\f0\b \cf0 ___________________________________________________________________________\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs28 \cf0 Evaluation report language identification with sparse tfidf-vectors (bigrams) - TRAIN:\
+
+\fs24 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+ 			precision    		recall  	f1-score   	support\
+\
+da       		1.00      		1.00      	1.00      	6776\
+de       		0.99      		1.00      	1.00     	11624\
+en       		0.99      		1.00      	1.00     	20167\
+fr       			1.00      		0.66      	0.80       	273\
+hu       		0.00      		0.00      	0.00         	3\
+it       			0.98      		0.52      	0.68       	233\
+sv       		0.00      		0.00      	0.00         	1\
+\
+accuracy                           					0.99     	39077\
+macro avg       	0.71      		0.60      	0.64     	39077\
+weighted avg       	0.99      		0.99      	0.99     	39077\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 ___________________________________________________________________________\
 \
 
-\fs28 Evaluation report language identification with word2vec embeddings - TRAIN:
+\fs28 Evaluation report language identification with sparse tfidf-vectors (bigrams) - TEST:
+\fs24 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+			precision    		recall  	f1-score   	support\
+\
+da       		1.00      		0.99      	0.99       	844\
+de       		0.99      		1.00      	0.99      	1448\
+en       		0.99      		1.00      	0.99      	2519\
+fr       			1.00      		0.50      	0.67        	38\
+it       			0.67      		0.06      	0.11        	32\
+\
+accuracy                           					0.99      	4881\
+macro avg       	0.93      		0.71      	0.75      	4881\
+weighted avg       	0.99      		0.99      	0.98      	4881\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 ___________________________________________________________________________\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\fs28 \cf0 Evaluation report language identification with word2vec embeddings - TRAIN:
 \f1\b0\fs24 \
 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
-\f0\b  			precision    		recall  	f1-score   	support\
+\f0\b \cf0  			precision    		recall  	f1-score   	support\
 \
 da       		0.98     		0.97      	0.97      	6776\
 de       		0.98      		0.99      	0.98     	11624\

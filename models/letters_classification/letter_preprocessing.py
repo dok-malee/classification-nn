@@ -36,6 +36,17 @@ def create_sparse_vectors(train_instances, test_instances, max_docfreq, min_docf
     #print(feature_names)
     return x_train, x_test
 
+def create_sparse_vectors_bigrams(train_instances, test_instances, max_docfreq, min_docfreq):
+    # https://scikit-learn.org/stable/auto_examples/text/plot_document_classification_20newsgroups.html#sphx-glr-auto-examples-text-plot-document-classification-20newsgroups-py
+    "create tf-idf vector representations, instances: list of str"
+    vectorizer = TfidfVectorizer(max_df=max_docfreq, min_df=min_docfreq, ngram_range=(2,2)) # no stopwords filter as we are dealing with a variety of languages 
+    x_train = vectorizer.fit_transform(train_instances)
+    x_test = vectorizer.transform(test_instances)
+
+    feature_names = vectorizer.get_feature_names_out()
+    #print(feature_names)
+    return x_train, x_test
+
 def sparse_to_Tensor(sparse_features):
     """convert the sparse matrix and label lists into pytorch tensor"""
     sparse_tensor = torch.sparse_coo_tensor(
@@ -106,6 +117,7 @@ if __name__ == '__main__':
 
     # sparse vectors
     x_train_sparse, x_test_sparse = create_sparse_vectors(train_inst, test_inst, 0.5, 5)
+    x_bigr_train, x_bigr_test = create_sparse_vectors_bigrams(train_inst, test_inst, 0.5, 5)
 
     # labels author classification
     y_train_author = train_author_labels
@@ -120,4 +132,4 @@ if __name__ == '__main__':
     #train_glove_tensor = get_glove_sentence_embedding(train_inst, glove=glove_model)
 
     #glove_model = GloVe(name='6B', dim=100)
-    print(my_embeddings)
+    #print(my_embeddings)
