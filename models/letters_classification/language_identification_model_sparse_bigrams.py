@@ -44,7 +44,7 @@ model = FFNN(input_size, hidden1, hidden2, output_size)
 model_name = "FFNN_sparse_lang"
 
 # training parameters
-num_epochs = 2
+num_epochs = 10
 learning_rate = 0.001
 loss_func = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
